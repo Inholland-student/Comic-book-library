@@ -61,6 +61,7 @@ services:
         condition: service_healthy
     volumes:
       - ./backend:/app
+      - ./data:/data
     networks:
       - comic_network
     command: python run.py
