@@ -23,11 +23,10 @@ docker compose up --build
 docker compose down
 
 # Stack:
-
-Frontend: Vue.js (keep it simple, no unnecessary complexity)
-Backend: Python (Flask or FastAPI — recommend the simpler one for this use case)
+Frontend: Vue.js (version 3)
+Backend: Python (flask)
 Database: MySQL with phpMyAdmin for local management
-All services run in Docker containers via Docker Compose (local only, no cloud)
+All services run in Docker containers via Docker Compose (local only, no cloud for now)
 
 
 # Security practices used
