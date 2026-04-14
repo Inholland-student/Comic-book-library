@@ -1,0 +1,9 @@
+fastapi
+uvicorn
+mysql-connector-python
+python-dotenv
+passlib[bcrypt]
+pytest
+pytest-cov
+python-jose
+httpx
