@@ -5,7 +5,7 @@ Comic CRUD routes blueprint
 from flask import Blueprint, request, jsonify
 from app.rbac import require_admin, require_super_admin
 from app.db import (
-    get_all_comics, get_comic_by_id, create_comic, update_comic, delete_comic,
+    get_comics_page, count_comics, get_comic_by_id, create_comic, update_comic, delete_comic,
     get_user_by_id
 )
 from flask_jwt_extended import get_jwt_identity, jwt_required
@@ -16,21 +16,47 @@ comics_bp = Blueprint('comics', __name__, url_prefix='/api/comics')
 @comics_bp.route('', methods=['GET'])
 def list_comics():
     """
-    Get all comics (public - anyone can read)
-    
-    Response:
-        200: List of comics
+    Get paginated comics list (public)
+
+    Query params:
+        page: int (default 1)
+        per_page: int (default 20, max 100)
     """
-    comics = get_all_comics()
-    return jsonify([{
-        'id': c.id,
-        'serie': c.serie,
-        'number': c.number,
-        'title': c.title,
-        'created_by': c.created_by,
-        'created_at': c.created_at.isoformat() if c.created_at else None,
-        'updated_at': c.updated_at.isoformat() if c.updated_at else None
-    } for c in comics]), 200
+    page_param = request.args.get('page', '1')
+    per_page_param = request.args.get('per_page', '20')
+
+    try:
+        page = int(page_param)
+        per_page = int(per_page_param)
+    except ValueError:
+        return jsonify({'error': 'page and per_page must be integers'}), 400
+
+    if page < 1 or per_page < 1:
+        return jsonify({'error': 'page and per_page must be positive integers'}), 400
+
+    if per_page > 100:
+        return jsonify({'error': 'per_page cannot exceed 100'}), 400
+
+    offset = (page - 1) * per_page
+    total = count_comics()
+    comics = get_comics_page(per_page, offset)
+    has_more = (offset + len(comics)) < total
+
+    return jsonify({
+        'comics': [{
+            'id': c.id,
+            'serie': c.serie,
+            'number': c.number,
+            'title': c.title,
+            'created_by': c.created_by,
+            'created_at': c.created_at.isoformat() if c.created_at else None,
+            'updated_at': c.updated_at.isoformat() if c.updated_at else None
+        } for c in comics],
+        'page': page,
+        'per_page': per_page,
+        'total': total,
+        'has_more': has_more
+    }), 200
 
 
 @comics_bp.route('/<int:comic_id>', methods=['GET'])

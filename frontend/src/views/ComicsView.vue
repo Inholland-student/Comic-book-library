@@ -11,6 +11,16 @@
       </button>
     </div>
 
+    <div v-if="comicsStore.hasMore" class="load-more">
+      <button 
+        class="btn btn-primary"
+        @click="comicsStore.loadMoreComics"
+        :disabled="comicsStore.loading"
+      >
+        {{ comicsStore.loading ? 'Loading more comics...' : 'Load more comics' }}
+      </button>
+    </div>
+
     <!-- Create/Edit Form Modal -->
     <div v-if="showCreateForm" class="modal-overlay" @click.self="closeForm">
       <div class="modal-content">
@@ -420,5 +430,11 @@ onMounted(() => {
   border: 1px solid #f5c6cb;
   border-radius: 4px;
   margin-top: 1rem;
+}
+
+.load-more {
+  display: flex;
+  justify-content: center;
+  margin: 2rem 0;
 }
 </style>

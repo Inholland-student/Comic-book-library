@@ -219,6 +219,56 @@ def get_all_comics():
         conn.close()
 
 
+def count_comics() -> int:
+    """
+    Return total number of comics.
+    """
+    conn = get_connection()
+    cursor = conn.cursor()
+
+    try:
+        cursor.execute("SELECT COUNT(*) FROM comics")
+        row = cursor.fetchone()
+        return int(row[0]) if row else 0
+    finally:
+        cursor.close()
+        conn.close()
+
+
+def get_comics_page(limit: int, offset: int):
+    """
+    Retrieve a paginated slice of comics.
+    """
+    conn = get_connection()
+    cursor = conn.cursor()
+
+    try:
+        query = """
+            SELECT id, serie, number, title, created_by, created_at, updated_at
+            FROM comics
+            ORDER BY created_at DESC
+            LIMIT %s OFFSET %s
+        """
+        cursor.execute(query, (limit, offset))
+        rows = cursor.fetchall()
+
+        comics = []
+        for row in rows:
+            comics.append(Comic(
+                id=row[0],
+                serie=row[1],
+                number=row[2],
+                title=row[3],
+                created_by=row[4],
+                created_at=row[5],
+                updated_at=row[6]
+            ))
+        return comics
+    finally:
+        cursor.close()
+        conn.close()
+
+
 def get_comic_by_id(comic_id: int):
     """
     Retrieve comic by ID
