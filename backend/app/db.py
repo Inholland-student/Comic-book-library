@@ -59,19 +59,20 @@ def get_user_by_username(username: str):
     
     try:
         # 🔒 Parameterized query prevents SQL injection
-        query = "SELECT id, username, email, password_hash, role, created_at, updated_at FROM users WHERE username = %s"
+        query = "SELECT id, uuid, username, email, password_hash, role, created_at, updated_at FROM users WHERE username = %s"
         cursor.execute(query, (username,))
         row = cursor.fetchone()
         
         if row:
             return User(
                 id=row[0],
-                username=row[1],
-                email=row[2],
-                password_hash=row[3],
-                role=row[4],
-                created_at=row[5],
-                updated_at=row[6]
+                uuid=row[1], 
+                username=row[2],
+                email=row[3],
+                password_hash=row[4],
+                role=row[5],
+                created_at=row[6],
+                updated_at=row[7]
             )
         return None
     finally:
@@ -79,7 +80,7 @@ def get_user_by_username(username: str):
         conn.close()
 
 
-def get_user_by_id(user_id: int):
+def get_user_by_uuid(user_uuid: str):
     """
     Retrieve user by ID
     Returns User object or None if not found
@@ -89,19 +90,20 @@ def get_user_by_id(user_id: int):
     
     try:
         # 🔒 Parameterized query
-        query = "SELECT id, username, email, password_hash, role, created_at, updated_at FROM users WHERE id = %s"
-        cursor.execute(query, (user_id,))
+        query = "SELECT id, uuid, username, email, password_hash, role, created_at, updated_at FROM users WHERE uuid = %s"
+        cursor.execute(query, (user_uuid,))
         row = cursor.fetchone()
         
         if row:
             return User(
                 id=row[0],
-                username=row[1],
-                email=row[2],
-                password_hash=row[3],
-                role=row[4],
-                created_at=row[5],
-                updated_at=row[6]
+                uuid=row[1],
+                username=row[2],
+                email=row[3],
+                password_hash=row[4],
+                role=row[5],
+                created_at=row[6],
+                updated_at=row[7]
             )
         return None
     finally:
@@ -164,25 +166,42 @@ def get_user_by_email(email: str):
     cursor = conn.cursor()
     
     try:
-        query = "SELECT id, username, email, password_hash, role, created_at, updated_at FROM users WHERE email = %s"
+        query = "SELECT id, uuid, username, email, password_hash, role, created_at, updated_at FROM users WHERE email = %s"
         cursor.execute(query, (email,))
         row = cursor.fetchone()
         
         if row:
             return User(
                 id=row[0],
-                username=row[1],
-                email=row[2],
-                password_hash=row[3],
-                role=row[4],
-                created_at=row[5],
-                updated_at=row[6]
+                uuid=row[1],
+                username=row[2],
+                email=row[3],
+                password_hash=row[4],
+                role=row[5],
+                created_at=row[6],
+                updated_at=row[7]
             )
         return None
     finally:
         cursor.close()
         conn.close()
 
+def get_user_id_by_uuid(user_uuid: str) -> int | None:
+    """
+    Gets USER ID for internal transactions
+    """
+
+    conn = get_connection()
+    cursor = conn.cursor(dictionary=True)
+
+    try:
+        query = "SELECT id FROM users WHERE uuid = %s"
+        cursor.execute(query, (user_uuid,))
+        user = cursor.fetchone()
+        return user["id"] if user else None
+    finally:
+        cursor.close()
+        conn.close()
 
 # ============================================================================
 # COMIC OPERATIONS
@@ -197,7 +216,7 @@ def get_all_comics():
     cursor = conn.cursor()
     
     try:
-        query = "SELECT id, serie, number, title, created_by, created_at, updated_at FROM comics ORDER BY created_at DESC"
+        query = "SELECT c.id, c.serie, c.number, c.title, u.uuid, c.created_at, c.updated_at FROM comics c JOIN users u ON c.created_by = u.id ORDER BY c.created_at DESC"
         cursor.execute(query)
         rows = cursor.fetchall()
         
@@ -244,9 +263,10 @@ def get_comics_page(limit: int, offset: int):
 
     try:
         query = """
-            SELECT id, serie, number, title, created_by, created_at, updated_at
-            FROM comics
-            ORDER BY created_at DESC
+            SELECT c.id, c.serie, c.number, c.title, u.uuid, c.created_at, c.updated_at
+            FROM comics c
+            JOIN users u ON c.created_by = u.id
+            ORDER BY c.created_at DESC
             LIMIT %s OFFSET %s
         """
         cursor.execute(query, (limit, offset))
@@ -279,7 +299,7 @@ def get_comic_by_id(comic_id: int):
     
     try:
         # 🔒 Parameterized query
-        query = "SELECT id, serie, number, title, created_by, created_at, updated_at FROM comics WHERE id = %s"
+        query = "SELECT c.id, c.serie, c.number, c.title, u.uuid, c.created_at, c.updated_at FROM comics c JOIN users u ON c.created_by = u.id WHERE c.id = %s"
         cursor.execute(query, (comic_id,))
         row = cursor.fetchone()
         
