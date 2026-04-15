@@ -5,7 +5,7 @@ Role-Based Access Control (RBAC) middleware
 from functools import wraps
 from flask import jsonify
 from flask_jwt_extended import get_jwt_identity, jwt_required
-from app.db import get_user_by_id
+from app.db import get_user_by_uuid
 
 
 def require_role(*allowed_roles):
@@ -34,8 +34,8 @@ def require_role(*allowed_roles):
         @jwt_required()  # First: verify JWT, returns 401 if missing/invalid
         def wrapper(*args, **kwargs):
             # Second: get user identity from JWT
-            user_id = int(get_jwt_identity())  # JWT identity stored as string
-            user = get_user_by_id(user_id)
+            user_uuid = get_jwt_identity()  # JWT identity stored as string
+            user = get_user_by_uuid(user_uuid)
             
             if not user:
                 return jsonify({'error': 'User not found'}), 404

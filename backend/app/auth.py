@@ -8,12 +8,12 @@ from app.db import verify_password as verify_password_hash, get_user_by_username
 from app.models import User
 
 
-def create_jwt_token(user_id: int, username: str, role: str, expires_in_hours: int = 24) -> str:
+def create_jwt_token(user_uuid: str, username: str, role: str, expires_in_hours: int = 24) -> str:
     """
     Create a JWT token with user claims
     
     Args:
-        user_id: User ID to include in token
+        user_uuid: User UUID to include in token
         username: Username to include in token
         role: User role to include in token
         expires_in_hours: Token expiration time in hours
@@ -23,13 +23,13 @@ def create_jwt_token(user_id: int, username: str, role: str, expires_in_hours: i
     """
     expires = timedelta(hours=expires_in_hours)
     additional_claims = {
-        'user_id': user_id,  # Include user_id in claims
+        'user_uuid': str(user_uuid),  # Include user_uuid in claims
         'username': username,
         'role': role
     }
     # 🔒 identity must be a string for Flask-JWT-Extended
     token = create_access_token(
-        identity=str(user_id),  # Convert to string for JWT subject
+        identity=str(user_uuid),  # Convert to string for JWT subject
         additional_claims=additional_claims,
         expires_delta=expires
     )

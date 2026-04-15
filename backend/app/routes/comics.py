@@ -6,7 +6,7 @@ from flask import Blueprint, request, jsonify
 from app.rbac import require_admin, require_super_admin
 from app.db import (
     get_comics_page, count_comics, get_comic_by_id, create_comic, update_comic, delete_comic,
-    get_user_by_id
+    get_user_id_by_uuid
 )
 from flask_jwt_extended import get_jwt_identity, jwt_required
 
@@ -126,7 +126,8 @@ def create_comic_endpoint():
         return jsonify({'error': 'number must be a positive integer'}), 400
     
     # Get creator ID from JWT
-    user_id = int(get_jwt_identity())
+    user_uuid = get_jwt_identity()
+    user_id = get_user_id_by_uuid(user_uuid)
     
     try:
         comic = create_comic(

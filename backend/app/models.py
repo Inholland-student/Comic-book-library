@@ -11,6 +11,7 @@ from typing import Optional
 class User:
     """User model with role-based access control"""
     id: int
+    uuid: str
     username: str
     email: str
     password_hash: str
@@ -30,7 +31,7 @@ class Comic:
     serie: str
     number: str
     title: str
-    created_by: int  # FK to User.id
+    created_by: str  # FK to User.uuid
     created_at: datetime
     updated_at: datetime
 

@@ -142,7 +142,7 @@ def login():
     
     # 🔒 Create JWT token
     access_token = create_jwt_token(
-        user_id=user.id,
+        user_uuid=str(user.uuid),
         username=user.username,
         role=user.role
     )
@@ -180,10 +180,10 @@ def get_current_user():
         200: User info
         401: Not authenticated
     """
-    from app.db import get_user_by_id
+    from app.db import get_user_by_uuid
     
-    user_id = int(get_jwt_identity())  # JWT identity is stored as string
-    user = get_user_by_id(user_id)
+    user_uuid = get_jwt_identity()  # JWT identity is stored as string
+    user = get_user_by_uuid(user_uuid)
     
     if not user:
         return jsonify({'error': 'User not found'}), 404
