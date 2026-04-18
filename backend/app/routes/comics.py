@@ -3,17 +3,18 @@ Comic CRUD routes blueprint
 🔒 Security: RBAC enforced for create/update/delete
 """
 from flask import Blueprint, request, jsonify
-from app.rbac import require_admin, require_super_admin
+from app.rbac import require_admin, require_any_user
 from app.db import (
     get_comics_page, count_comics, get_comic_by_id, create_comic, update_comic, delete_comic,
     get_user_id_by_uuid
 )
-from flask_jwt_extended import get_jwt_identity, jwt_required
+from flask_jwt_extended import jwt_required, get_jwt
 
 comics_bp = Blueprint('comics', __name__, url_prefix='/api/comics')
 
 
 @comics_bp.route('', methods=['GET'])
+@require_any_user
 def list_comics():
     """
     Get paginated comics list (public)
