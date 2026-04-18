@@ -4,13 +4,8 @@ Tests for password hashing and verification security
 """
 import pytest
 from datetime import datetime
-from app.db import (
-    create_user,
-    get_user_by_username,
-    verify_password,
-    hash_password
-)
-
+from app.features.auth.user_db import create_user, get_user_by_username
+from app.features.auth.password_service import verify_password, hash_password
 
 class TestPasswordSecurity:
     """Test password hashing and verification"""
