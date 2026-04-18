@@ -2,8 +2,15 @@
 Flask app factory for Comic Book Library API
 """
 from flask import Flask
+from flask_limiter import Limiter
+from flask_limiter.util import get_remote_address
 from flask_cors import CORS
 from flask_jwt_extended import JWTManager
+
+limiter = Limiter(
+    key_func=get_remote_address,
+    storage_uri="memory://"
+)
 
 def create_app(config_name='development'):
     """
@@ -39,6 +46,16 @@ def create_app(config_name='development'):
     app.config['JWT_COOKIE_CSRF_PROTECT'] = False  # Disable CSRF token checks for cookie-based JWTs
     
     jwt = JWTManager(app)
+
+    limiter.init_app(app)
+
+    # Rate limitting error 
+    @app.errorhandler(429)
+    def ratelimit_handler(error):
+        return {
+            "error": "Too many login attempts",
+            "message": "You have exceeded the allowed number of login requests. Please try again later."
+        }, 429
     
     # Health check endpoint (for Docker healthcheck)
     @app.route('/health', methods=['GET'])
