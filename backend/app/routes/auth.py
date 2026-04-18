@@ -4,9 +4,11 @@ Authentication routes blueprint
 """
 from flask import Blueprint, request, jsonify
 from flask_jwt_extended import create_access_token, jwt_required, get_jwt_identity, unset_jwt_cookies
+from flask_limiter.util import get_remote_address
 from datetime import timedelta
 from app.db import create_user, verify_password as verify_password_hash, get_user_by_username, get_user_by_email
 from app.auth import verify_login, create_jwt_token
+from app import limiter
 import re
 
 auth_bp = Blueprint('auth', __name__, url_prefix='/api/auth')
@@ -103,8 +105,21 @@ def register():
     except Exception as e:
         return jsonify({'error': f'Registration failed: {str(e)}'}), 500
 
+def username_rate_limit_key():
+    data = request.get_json(silent=True) or {}
+    username = data.get("username", "").strip().lower()
 
+    if username:
+        return f"login:{username}"
+
+    return f"ip:{get_remote_address()}"
+
+# Rate limiting:
+# 30 login requests per 15 minutes per IP
+# 5 login requests per 15 minutes per username
 @auth_bp.route('/login', methods=['POST'])
+@limiter.limit("30 per 15 minutes", key_func=get_remote_address)
+@limiter.limit("5 per 15 minutes", key_func=username_rate_limit_key)
 def login():
     """
     Login user and set JWT in httpOnly cookie
