@@ -58,6 +58,9 @@ def require_admin(fn):
     """Restrict to admin or super_admin"""
     return require_role('admin', 'super_admin')(fn)
 
+def require_any_user(fn):
+    """Restrict to any authenticated user (any role)"""
+    return require_role('friend', 'admin', 'super_admin')(fn)
 
 def require_super_admin(fn):
     """Restrict to super_admin only"""
