@@ -63,10 +63,10 @@ def create_app(config_name='development'):
         return {'status': 'ok'}, 200
     
     # Register blueprints
-    from .routes.auth import auth_bp
+    from .features.auth.auth_routes import auth_bp
     app.register_blueprint(auth_bp)
     
-    from .routes.comics import comics_bp
+    from .features.comics.comic_routes import comics_bp
     app.register_blueprint(comics_bp)
     
     return app

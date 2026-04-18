@@ -2,10 +2,11 @@
 Authentication helper functions
 🔒 Security: JWT token creation, verification, password hashing
 """
-from flask_jwt_extended import create_access_token, decode_token
+from flask_jwt_extended import create_access_token
 from datetime import timedelta
-from app.db import verify_password as verify_password_hash, get_user_by_username
-from app.models import User
+from .password_service import verify_password as verify_password_hash
+from .user_db import get_user_by_username
+from .user import User
 
 
 def create_jwt_token(user_uuid: str, username: str, role: str, expires_in_hours: int = 24) -> str:

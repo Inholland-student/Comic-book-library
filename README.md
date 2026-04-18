@@ -42,8 +42,6 @@ RBAC enforced server-side, not just in the frontend
 ## ToDo
 - not every feature of the assignment is working yet / implemented feel free to check out what is not working / implemented yet
 - keep security in mind when implementing sth
-- secure the endppoints so a user who is not logged in cannot do /comics 
-
 
 
 

@@ -5,7 +5,7 @@ Role-Based Access Control (RBAC) middleware
 from functools import wraps
 from flask import jsonify
 from flask_jwt_extended import get_jwt_identity, jwt_required
-from app.db import get_user_by_uuid
+from .user_db import get_user_by_uuid
 
 
 def require_role(*allowed_roles):
