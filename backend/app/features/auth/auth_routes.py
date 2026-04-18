@@ -3,16 +3,14 @@ Authentication routes blueprint
 🔒 Security: Login, register, logout with JWT in httpOnly cookies
 """
 from flask import Blueprint, request, jsonify
-from flask_jwt_extended import create_access_token, jwt_required, get_jwt_identity, unset_jwt_cookies
+from flask_jwt_extended import jwt_required, get_jwt_identity, unset_jwt_cookies
 from flask_limiter.util import get_remote_address
-from datetime import timedelta
-from app.db import create_user, verify_password as verify_password_hash, get_user_by_username, get_user_by_email
-from app.auth import verify_login, create_jwt_token
+from .user_db import create_user, get_user_by_username, get_user_by_email
+from .auth import verify_login, create_jwt_token
 from app import limiter
 import re
 
 auth_bp = Blueprint('auth', __name__, url_prefix='/api/auth')
-
 
 # Input validation
 def validate_email(email: str) -> bool:
@@ -195,7 +193,7 @@ def get_current_user():
         200: User info
         401: Not authenticated
     """
-    from app.db import get_user_by_uuid
+    from .user_db import get_user_by_uuid
     
     user_uuid = get_jwt_identity()  # JWT identity is stored as string
     user = get_user_by_uuid(user_uuid)
