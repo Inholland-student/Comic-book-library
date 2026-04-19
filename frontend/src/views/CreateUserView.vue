@@ -2,8 +2,8 @@
   <div class="page-wrap">
     <div class="card">
       <h1>Add user</h1>
-      <p v-if="isSuper" class="hint">creates an admin account</p>
-      <p v-else-if="isAdmin" class="hint">pick role: admin or friend</p>
+      <p v-if="isSuper" class="hint">pick role: admin or friend</p>
+      <p v-else-if="isAdmin" class="hint">creates a friend account</p>
 
       <form v-if="allowed" @submit.prevent="submit">
         <div class="field">
@@ -18,7 +18,7 @@
           <label for="p">Password</label>
           <input id="p" v-model="form.password" type="password" required minlength="8" />
         </div>
-        <div v-if="isAdmin" class="field">
+        <div v-if="isSuper" class="field">
           <label for="r">Role</label>
           <select id="r" v-model="form.role">
             <option value="friend">friend</option>
@@ -70,8 +70,8 @@ async function submit () {
       email: form.value.email.trim(),
       password: form.value.password
     }
-    if (isAdmin.value) payload.role = form.value.role
-    if (isSuper.value) payload.role = 'admin'
+    if (isAdmin.value) payload.role = 'friend'
+    if (isSuper.value) payload.role = form.value.role
     await authService.createStaffUser(payload)
     router.push('/comics')
   } catch (err) {

@@ -21,13 +21,13 @@ def test_users_endpoint_requires_auth(client):
     assert r.status_code == 401
 
 
-def test_super_admin_rejects_friend_role(client):
+def test_super_admin_can_create_friend(client):
     login = client.post(
         '/api/auth/login',
         json={'username': 'super_admin', 'password': 'changeme'},
     )
     assert login.status_code == 200
-    u = _uniq('badfriend')
+    u = _uniq('friendfromsuper')
     r = client.post(
         '/api/auth/users',
         json={
@@ -37,7 +37,8 @@ def test_super_admin_rejects_friend_role(client):
             'role': 'friend',
         },
     )
-    assert r.status_code == 400
+    assert r.status_code == 201
+    assert r.get_json()['role'] == 'friend'
 
 
 def test_super_admin_creates_admin(client):
@@ -107,3 +108,22 @@ def test_admin_can_create_friend(client):
     )
     assert r.status_code == 201
     assert r.get_json()['role'] == 'friend'
+
+
+def test_admin_rejects_admin_role(client):
+    login = client.post(
+        '/api/auth/login',
+        json={'username': 'admin_user', 'password': 'changeme'},
+    )
+    assert login.status_code == 200
+    u = _uniq('admincant')
+    r = client.post(
+        '/api/auth/users',
+        json={
+            'username': u,
+            'email': f'{u}@t.local',
+            'password': 'abc12345',
+            'role': 'admin',
+        },
+    )
+    assert r.status_code == 400

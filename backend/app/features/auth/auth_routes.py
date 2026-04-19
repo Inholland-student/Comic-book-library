@@ -37,7 +37,7 @@ def validate_password(password: str) -> tuple[bool, str]:
 @auth_bp.route('/users', methods=['POST'])
 @jwt_required()
 def create_user_by_staff():
-    """super_admin may only create admins; admin may create admin or friend (not super_admin)."""
+    """admin may only create friend; super_admin may create admin or friend."""
     actor = get_user_by_uuid(get_jwt_identity())
     if not actor:
         return jsonify({'error': 'User not found'}), 404
@@ -56,10 +56,10 @@ def create_user_by_staff():
     if not username or not email or not password:
         return jsonify({'error': 'username, email, and password are required'}), 400
 
-    if actor.role == 'super_admin':
-        if requested_role and requested_role != 'admin':
-            return jsonify({'error': 'super admin can only create admin users'}), 400
-        new_role = 'admin'
+    if actor.role == 'admin':
+        if requested_role and requested_role != 'friend':
+            return jsonify({'error': 'admin can only create friend users'}), 400
+        new_role = 'friend'
     else:
         if requested_role not in ('admin', 'friend'):
             return jsonify({'error': 'role must be admin or friend'}), 400
