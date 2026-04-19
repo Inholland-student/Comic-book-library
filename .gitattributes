@@ -1,3 +1,4 @@
-# Auto detect text files and perform LF normalization
 * text=auto
 
+# windows + docker: shell scripts must be lf or linux breaks
+*.sh text eol=lf

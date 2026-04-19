@@ -56,13 +56,10 @@ def list_comics():
 
 
 @comics_bp.route('/<int:comic_id>', methods=['GET'])
+@require_any_user
 def get_comic(comic_id):
     """
-    Get individual comic (public - anyone can read)
-    
-    Response:
-        200: Comic details
-        404: Comic not found
+    Get one comic (login required; same as list)
     """
     comic = get_comic_by_id(comic_id)
     

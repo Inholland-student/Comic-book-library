@@ -1,6 +1,6 @@
 import axios from 'axios'
 
-const API_BASE_URL = 'http://localhost:5000/api'
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || '/api'
 
 const authService = {
   register: async (username, email, password) => {
@@ -36,6 +36,15 @@ const authService = {
     } catch (error) {
       return null
     }
+  },
+
+  createStaffUser: async ({ username, email, password, role }) => {
+    const body = { username, email, password }
+    if (role !== undefined && role !== '') body.role = role
+    const response = await axios.post(`${API_BASE_URL}/auth/users`, body, {
+      withCredentials: true
+    })
+    return response.data
   }
 }
 

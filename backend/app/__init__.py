@@ -30,8 +30,15 @@ def create_app(config_name='development'):
         from .config import DevelopmentConfig
         app.config.from_object(DevelopmentConfig)
     
-    # Initialize Flask extensions
-    CORS(app, supports_credentials=True)  # Enable CORS with credentials (for cookies)
+    # cookies + cors: only these dev origins (vite on 5173)
+    CORS(
+        app,
+        supports_credentials=True,
+        origins=[
+            'http://localhost:5173',
+            'http://127.0.0.1:5173',
+        ],
+    )
     
     # JWT Configuration
     app.config['JWT_SECRET_KEY'] = app.config['JWT_SECRET']

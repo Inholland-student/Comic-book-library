@@ -5,7 +5,7 @@ Authentication routes blueprint
 from flask import Blueprint, request, jsonify
 from flask_jwt_extended import jwt_required, get_jwt_identity, unset_jwt_cookies
 from flask_limiter.util import get_remote_address
-from .user_db import create_user, get_user_by_username, get_user_by_email
+from .user_db import create_user, get_user_by_username, get_user_by_email, get_user_by_uuid
 from .auth import verify_login, create_jwt_token
 from app import limiter
 import re
@@ -32,6 +32,67 @@ def validate_password(password: str) -> tuple[bool, str]:
         return False, "Password must contain at least one letter and one number"
     
     return True, ""
+
+
+@auth_bp.route('/users', methods=['POST'])
+@jwt_required()
+def create_user_by_staff():
+    """super_admin may only create admins; admin may create admin or friend (not super_admin)."""
+    actor = get_user_by_uuid(get_jwt_identity())
+    if not actor:
+        return jsonify({'error': 'User not found'}), 404
+    if actor.role not in ('super_admin', 'admin'):
+        return jsonify({'error': 'Access denied'}), 403
+
+    data = request.get_json()
+    if not data:
+        return jsonify({'error': 'Request body must be JSON'}), 400
+
+    username = data.get('username', '').strip()
+    email = data.get('email', '').strip()
+    password = data.get('password', '')
+    requested_role = (data.get('role') or '').strip()
+
+    if not username or not email or not password:
+        return jsonify({'error': 'username, email, and password are required'}), 400
+
+    if actor.role == 'super_admin':
+        if requested_role and requested_role != 'admin':
+            return jsonify({'error': 'super admin can only create admin users'}), 400
+        new_role = 'admin'
+    else:
+        if requested_role not in ('admin', 'friend'):
+            return jsonify({'error': 'role must be admin or friend'}), 400
+        new_role = requested_role
+
+    if not validate_email(email):
+        return jsonify({'error': 'Invalid email format'}), 400
+
+    valid_pwd, pwd_msg = validate_password(password)
+    if not valid_pwd:
+        return jsonify({'error': pwd_msg}), 400
+
+    if get_user_by_username(username):
+        return jsonify({'error': 'Username already exists'}), 409
+    if get_user_by_email(email):
+        return jsonify({'error': 'Email already exists'}), 409
+
+    try:
+        user = create_user(
+            username=username,
+            email=email,
+            password_plaintext=password,
+            role=new_role,
+        )
+        return jsonify({
+            'id': user.id,
+            'username': user.username,
+            'email': user.email,
+            'role': user.role,
+            'created_at': user.created_at.isoformat() if user.created_at else None,
+        }), 201
+    except Exception as e:
+        return jsonify({'error': f'Could not create user: {str(e)}'}), 500
 
 
 @auth_bp.route('/register', methods=['POST'])
@@ -193,8 +254,6 @@ def get_current_user():
         200: User info
         401: Not authenticated
     """
-    from .user_db import get_user_by_uuid
-    
     user_uuid = get_jwt_identity()  # JWT identity is stored as string
     user = get_user_by_uuid(user_uuid)
     
