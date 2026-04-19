@@ -1,4 +1,4 @@
-from app.features.common.db import get_connection
+from app.features.common.persistence.db import get_connection
 from .user import User, VALID_ROLES
 from .password_service import hash_password
 from mysql.connector import Error

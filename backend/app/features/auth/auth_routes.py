@@ -85,7 +85,7 @@ def create_user_by_staff():
             role=new_role,
         )
         return jsonify({
-            'id': user.id,
+            'uuid': user.uuid,
             'username': user.username,
             'email': user.email,
             'role': user.role,
@@ -155,7 +155,7 @@ def register():
         
         # 🔒 Response does NOT include password or password_hash
         return jsonify({
-            'id': user.id,
+            'uuid': user.uuid,
             'username': user.username,
             'email': user.email,
             'role': user.role,
@@ -223,7 +223,7 @@ def login():
     
     # 🔒 Create response WITHOUT token in body
     response = jsonify({
-        'id': user.id,
+        'uuid': user.uuid,
         'username': user.username,
         'email': user.email,
         'role': user.role,
@@ -262,7 +262,7 @@ def get_current_user():
     
     # 🔒 Response does NOT include password_hash
     return jsonify({
-        'id': user.id,
+        'uuid': user.uuid,
         'username': user.username,
         'email': user.email,
         'role': user.role,

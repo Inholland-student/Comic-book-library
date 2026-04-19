@@ -1,4 +1,4 @@
-from app.features.common.db import get_connection
+from app.features.common.persistence.db import get_connection
 from .comic import Comic
 from mysql.connector import Error
 

@@ -3,7 +3,7 @@ Comic CRUD routes blueprint
 🔒 Security: RBAC enforced for create/update/delete
 """
 from flask import Blueprint, request, jsonify
-from app.features.auth.rbac import require_admin, require_any_user
+from app.features.common.middleware.rbac import require_admin, require_any_user
 from .comic_db import get_comics_page, count_comics, get_comic_by_id, create_comic, update_comic, delete_comic
 from app.features.auth.user_db import get_user_id_by_uuid
 comics_bp = Blueprint('comics', __name__, url_prefix='/api/comics')
