@@ -45,6 +45,15 @@ minikube image load comic-frontend:latest
 
 ### 3. Apply Terraform
 
+Create a local secrets file that is not committed to Git, for example `secret.dev.tfvars`:
+
+```hcl
+db_password         = "replace-me"
+mysql_root_password = "replace-me"
+jwt_secret          = "replace-me-with-a-long-random-secret"
+secret_key          = "replace-me-with-another-long-random-secret"
+```
+
 The Terraform config deploys:
 
 - `mysql` deployment + `mysql` service (`ClusterIP`)
@@ -56,7 +65,7 @@ The frontend container serves the built Vue app through Nginx and proxies `/api`
 ```powershell
 terraform init
 terraform fmt
-terraform apply -var-file="envs/dev.tfvars"
+terraform apply -var-file="envs/dev.tfvars" -var-file="secret.dev.tfvars"
 ```
 
 ### 4. Check resources
@@ -79,7 +88,7 @@ If you change the MySQL seed schema or want to reinitialize the database from sc
 ```powershell
 kubectl delete deployment mysql -n comic-dev
 kubectl delete pvc mysql-data -n comic-dev
-terraform apply -var-file="envs/dev.tfvars"
+terraform apply -var-file="envs/dev.tfvars" -var-file="secret.dev.tfvars"
 ```
 
 ## Terraform Notes
@@ -90,11 +99,13 @@ terraform apply -var-file="envs/dev.tfvars"
 - The full dataset files are too large for a Kubernetes ConfigMap, so this Minikube setup seeds a small sample dataset instead of importing the entire CSV automatically.
 - The backend image uses `imagePullPolicy = "Never"` so Minikube uses the image you built or loaded locally.
 - Backend environment variables are stored in a Kubernetes secret created by Terraform.
+- Real secret values should live in a local ignored `secret.dev.tfvars` file or in `TF_VAR_...` environment variables, not in Git-tracked Terraform files.
+- Terraform `sensitive = true` only hides values from CLI output; the real values can still appear in Terraform state.
 - The backend now connects to the in-cluster MySQL service at `DB_HOST=mysql` by default.
 
 ## Important Variables
 
-Defaults are kept simple for local development, but you should override secrets in `envs/*.tfvars` or with `-var` values:
+Use `envs/*.tfvars` for non-secret environment settings and keep secrets in a local ignored file or `TF_VAR_...` environment variables:
 
 - `frontend_image`
 - `backend_image`
@@ -118,15 +129,27 @@ Defaults are kept simple for local development, but you should override secrets 
 - Authentication uses JWT in httpOnly cookies.
 - RBAC is enforced server-side.
 
+## Safer Secret Options
+
+Option 1: local ignored tfvars file
+
+```powershell
+terraform apply -var-file="envs/dev.tfvars" -var-file="secret.dev.tfvars"
+```
+
+Option 2: environment variables
+
+```powershell
+$env:TF_VAR_db_password="replace-me"
+$env:TF_VAR_mysql_root_password="replace-me"
+$env:TF_VAR_jwt_secret="replace-me-with-a-long-random-secret"
+$env:TF_VAR_secret_key="replace-me-with-another-long-random-secret"
+terraform apply -var-file="envs/dev.tfvars"
+```
+
 ## Stop Local Compose Stack
 
 ```powershell
 docker compose down
 ```
-
-## kopje
-kubectl get pods -n comic-dev
-kubectl logs deployment/backend -n comic-dev
-kubectl logs deployment/mysql -n comic-dev
-minikube service frontend-service -n comic-dev
 

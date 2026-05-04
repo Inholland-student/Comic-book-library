@@ -67,7 +67,7 @@ variable "db_password" {
   description = "Database password."
   type        = string
   sensitive   = true
-  default     = "change-me"
+  nullable    = false
 }
 
 variable "db_name" {
@@ -92,21 +92,21 @@ variable "mysql_root_password" {
   description = "MySQL root password."
   type        = string
   sensitive   = true
-  default     = "change-me-root-password"
+  nullable    = false
 }
 
 variable "jwt_secret" {
   description = "JWT signing secret."
   type        = string
   sensitive   = true
-  default     = "change-me-super-secret-jwt-key"
+  nullable    = false
 }
 
 variable "secret_key" {
   description = "Flask secret key."
   type        = string
   sensitive   = true
-  default     = "change-me-flask-secret-key"
+  nullable    = false
 }
 
 variable "import_created_by" {

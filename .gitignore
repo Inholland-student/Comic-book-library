@@ -52,3 +52,10 @@ htmlcov/
 
 # Docker
 docker-compose.override.yml
+
+# Terraform local secrets/state
+secret.*.tfvars
+*.auto.tfvars
+terraform.tfstate
+terraform.tfstate.*
+.terraform/
