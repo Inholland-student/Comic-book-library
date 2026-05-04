@@ -38,6 +38,11 @@ PY
 }
 
 run_import() {
+    if [ ! -f "/data/comic_digital.csv" ]; then
+        echo "[entrypoint] CSV file not mounted; skipping comic import."
+        return
+    fi
+
     cmd=(python scripts/load_comics_from_csv.py)
     if [ -n "${IMPORT_CREATED_BY:-}" ]; then
         cmd+=(--created-by "${IMPORT_CREATED_BY}")

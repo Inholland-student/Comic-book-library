@@ -1,18 +1,18 @@
-FROM node:20-alpine
+FROM node:20-alpine AS build
 
 WORKDIR /app
 
-# Copy package files
 COPY package*.json ./
+RUN npm ci
 
-# Install dependencies
-RUN npm install
-
-# Copy app code
 COPY . .
+RUN npm run build
 
-# Expose port 5173 (Vite default)
-EXPOSE 5173
+FROM nginx:1.27-alpine
 
-# Run Vite dev server
-CMD ["npm", "run", "dev"]
+COPY nginx.conf /etc/nginx/conf.d/default.conf
+COPY --from=build /app/dist /usr/share/nginx/html
+
+EXPOSE 80
+
+CMD ["nginx", "-g", "daemon off;"]

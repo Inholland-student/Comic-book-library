@@ -1,57 +1,132 @@
+# Comic Book Library
 
-# Assignment week 1
-Create a web application to display comic book library. 
-Dataset can be found on Moodle.
-Think about the architecture and decisions must be made!
-Use:
-* Docker containers (all local for now)
-* GitHub repo (shared with wiley.finch@inholland.nl and micha.vandermeer@inholland.nl )
-* TDD (Test Driven Development)
-* Store secrets save?
-* RBAC (Role Based Access Control) behind login. 
-* “super admin” -> can create only “admin”s
-* “admin” -> can create other users except “super admin”s and can add, change and delete comics
-* “friends” -> can see the comics
-* visitors without login can not see anything
+Create a web application to display a comic book library.
 
+## Stack
 
+- Frontend: Vue 3
+- Backend: Flask
+- Database: MySQL
+- Local container workflow: Docker / Minikube / Kubernetes / Terraform
 
-# starting application
+## Run With Docker Compose
+
+```powershell
 docker compose down -v
 docker compose up --build
+```
 
-# closing application
+## Run With Minikube + Terraform
+
+### 1. Start Minikube
+
+```powershell
+minikube start --driver=docker
+kubectl get nodes
+```
+
+### 2. Build Docker images
+
+Option A: build directly into Minikube's Docker daemon
+
+```powershell
+minikube image build -t comic-backend:latest .\backend
+minikube image build -t comic-frontend:latest .\frontend
+```
+
+Option B: build with local Docker, then load into Minikube
+
+```powershell
+docker build -t comic-backend:latest .\backend
+docker build -t comic-frontend:latest .\frontend
+minikube image load comic-backend:latest
+minikube image load comic-frontend:latest
+```
+
+### 3. Apply Terraform
+
+The Terraform config deploys:
+
+- `mysql` deployment + `mysql` service (`ClusterIP`)
+- `backend` deployment + `backend-service` (`ClusterIP`)
+- `frontend` deployment + `frontend-service` (`NodePort`)
+
+The frontend container serves the built Vue app through Nginx and proxies `/api` requests to `backend-service`, so the browser only needs the frontend service URL.
+
+```powershell
+terraform init
+terraform fmt
+terraform apply -var-file="envs/dev.tfvars"
+```
+
+### 4. Check resources
+
+```powershell
+kubectl get pods -n comic-dev
+kubectl get svc -n comic-dev
+```
+
+### 5. Open the frontend
+
+```powershell
+minikube service frontend-service -n comic-dev
+```
+
+## Reset MySQL Data
+
+If you change the MySQL seed schema or want to reinitialize the database from scratch, delete the MySQL workload and its persistent volume claim, then re-apply Terraform:
+
+```powershell
+kubectl delete deployment mysql -n comic-dev
+kubectl delete pvc mysql-data -n comic-dev
+terraform apply -var-file="envs/dev.tfvars"
+```
+
+## Terraform Notes
+
+- Terraform uses the Kubernetes provider and creates native Kubernetes resources directly from `main.tf`.
+- MySQL uses the official `mysql:8.0` image and is initialized with a compact schema, seed users, and a few sample comics from Terraform.
+- MySQL data is stored in a simple PersistentVolumeClaim, which works well with Minikube's default storage class.
+- The full dataset files are too large for a Kubernetes ConfigMap, so this Minikube setup seeds a small sample dataset instead of importing the entire CSV automatically.
+- The backend image uses `imagePullPolicy = "Never"` so Minikube uses the image you built or loaded locally.
+- Backend environment variables are stored in a Kubernetes secret created by Terraform.
+- The backend now connects to the in-cluster MySQL service at `DB_HOST=mysql` by default.
+
+## Important Variables
+
+Defaults are kept simple for local development, but you should override secrets in `envs/*.tfvars` or with `-var` values:
+
+- `frontend_image`
+- `backend_image`
+- `frontend_replicas`
+- `backend_replicas`
+- `db_host`
+- `db_port`
+- `db_user`
+- `db_password`
+- `db_name`
+- `mysql_image`
+- `mysql_storage_size`
+- `mysql_root_password`
+- `jwt_secret`
+- `secret_key`
+
+## Current Security / Project Notes
+
+- Secrets should stay out of Git and out of hardcoded source files.
+- Passwords are hashed with bcrypt.
+- Authentication uses JWT in httpOnly cookies.
+- RBAC is enforced server-side.
+
+## Stop Local Compose Stack
+
+```powershell
 docker compose down
+```
 
-# Stack:
-Frontend: Vue.js (version 3)
-Backend: Python (flask)
-Database: MySQL with phpMyAdmin for local management
-All services run in Docker containers via Docker Compose (local only, no cloud for now)
-
-
-# Security practices used
-
-Secrets (DB passwords, JWT secret, etc.) must be stored safely — use a .env file, never hardcoded, never committed to Git
-Passwords must be hashed (bcrypt)
-Authentication via JWT tokens stored in httpOnly cookies (not localStorage)
-Input validation and sanitization on all forms (prevent SQL injection and XSS)
-RBAC enforced server-side, not just in the frontend
-.env listed in .gitignore from day one
-
-
-## ToDo
-- not every feature of the assignment is working yet / implemented feel free to check out what is not working / implemented yet
-- keep security in mind when implementing sth
-
-
-
-
-
-
- 
-
-  
-
-
+## kopje
+kubectl get pods -n comic-dev
+kubectl logs deployment/backend -n comic-dev
+kubectl logs deployment/mysql -n comic-dev
+minikube service frontend-service -n comic-dev
 
