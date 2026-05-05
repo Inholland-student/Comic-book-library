@@ -40,7 +40,7 @@ resource "kubernetes_deployment" "frontend" {
           }
 
           env {
-            name  = "BACKEND_URL"
+            name  = "BACKEND_PROXY_TARGET"
             value = "http://${kubernetes_service.backend.metadata[0].name}:${var.backend_port}"
           }
         }

@@ -4,18 +4,27 @@ param(
     [string]$Environment = "dev"
 )
 
+$ErrorActionPreference = "Stop"
+
+. "$PSScriptRoot/common.ps1"
+
+$Kubectl = Get-RequiredCommand "kubectl"
 $Namespace = "comic-library-$Environment"
+
+if (!(Test-Path $Kubectl)) {
+    throw "kubectl not found at $Kubectl"
+}
 
 Write-Host "Namespace: $Namespace"
 Write-Host ""
 
 Write-Host "Pods:"
-kubectl get pods -n $Namespace
+& $Kubectl get pods -n $Namespace
 
 Write-Host ""
 Write-Host "Deployments:"
-kubectl get deployments -n $Namespace
+& $Kubectl get deployments -n $Namespace
 
 Write-Host ""
 Write-Host "Services:"
-kubectl get services -n $Namespace
+& $Kubectl get services -n $Namespace

@@ -44,12 +44,6 @@ variable "backend_replicas" {
   default     = 1
 }
 
-variable "backend_port" {
-  type        = number
-  description = "Port exposed by the backend container"
-  default     = 8000
-}
-
 variable "flask_env" {
   type        = string
   description = "Flask environment"
