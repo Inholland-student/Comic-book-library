@@ -2,8 +2,15 @@
 Flask app factory for Comic Book Library API
 """
 from flask import Flask
+from flask_limiter import Limiter
+from flask_limiter.util import get_remote_address
 from flask_cors import CORS
 from flask_jwt_extended import JWTManager
+
+limiter = Limiter(
+    key_func=get_remote_address,
+    storage_uri="memory://"
+)
 
 def create_app(config_name='development'):
     """
@@ -23,8 +30,15 @@ def create_app(config_name='development'):
         from .config import DevelopmentConfig
         app.config.from_object(DevelopmentConfig)
     
-    # Initialize Flask extensions
-    CORS(app, supports_credentials=True)  # Enable CORS with credentials (for cookies)
+    # cookies + cors: only these dev origins (vite on 5173)
+    CORS(
+        app,
+        supports_credentials=True,
+        origins=[
+            'http://localhost:5173',
+            'http://127.0.0.1:5173',
+        ],
+    )
     
     # JWT Configuration
     app.config['JWT_SECRET_KEY'] = app.config['JWT_SECRET']
@@ -39,6 +53,16 @@ def create_app(config_name='development'):
     app.config['JWT_COOKIE_CSRF_PROTECT'] = False  # Disable CSRF token checks for cookie-based JWTs
     
     jwt = JWTManager(app)
+
+    limiter.init_app(app)
+
+    # Rate limitting error 
+    @app.errorhandler(429)
+    def ratelimit_handler(error):
+        return {
+            "error": "Too many login attempts",
+            "message": "You have exceeded the allowed number of login requests. Please try again later."
+        }, 429
     
     # Health check endpoint (for Docker healthcheck)
     @app.route('/health', methods=['GET'])
@@ -46,10 +70,10 @@ def create_app(config_name='development'):
         return {'status': 'ok'}, 200
     
     # Register blueprints
-    from .routes.auth import auth_bp
+    from .features.auth.auth_routes import auth_bp
     app.register_blueprint(auth_bp)
     
-    from .routes.comics import comics_bp
+    from .features.comics.comic_routes import comics_bp
     app.register_blueprint(comics_bp)
     
     return app

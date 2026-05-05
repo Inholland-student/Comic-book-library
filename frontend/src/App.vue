@@ -12,6 +12,13 @@
           >
             Comics
           </router-link>
+          <router-link
+            v-if="authStore.isLoggedIn && canAddUsers"
+            to="/users/create"
+            class="nav-link"
+          >
+            Add user
+          </router-link>
           
           <div v-if="authStore.isLoggedIn" class="nav-user">
             <span class="user-info">
@@ -39,13 +46,18 @@
 </template>
 
 <script setup>
-import { onMounted } from 'vue'
+import { onMounted, computed } from 'vue'
 import { useRouter } from 'vue-router'
 import { useAuthStore } from '@/stores/auth.js'
 import authService from '@/services/auth.js'
 
 const authStore = useAuthStore()
 const router = useRouter()
+
+const canAddUsers = computed(() => {
+  const r = authStore.currentUser?.role
+  return r === 'admin' || r === 'super_admin'
+})
 
 const formatRole = (role) => {
   return role.charAt(0).toUpperCase() + role.slice(1).replace('_', ' ')
