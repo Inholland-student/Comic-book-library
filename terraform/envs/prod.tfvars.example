@@ -1,0 +1,19 @@
+environment = "prod"
+namespace   = "comic-library-prod"
+
+frontend_image = "comic-frontend:latest"
+backend_image  = "comic-backend:latest"
+
+frontend_replicas = 2
+backend_replicas  = 2
+
+mysql_database      = "comic_library_prod"
+mysql_user          = "comic_user_prod"
+mysql_password      = "CHANGE_ME"
+mysql_root_password = "CHANGE_ME"
+
+jwt_secret = "CHANGE_ME"
+secret_key = "CHANGE_ME"
+
+backend_port  = 5000
+frontend_port = 5173

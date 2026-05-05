@@ -1,0 +1,19 @@
+environment = "dev"
+namespace   = "comic-library-dev"
+
+frontend_image = "comic-frontend:latest"
+backend_image  = "comic-backend:latest"
+
+frontend_replicas = 1
+backend_replicas  = 1
+
+mysql_database      = "comic_library_dev"
+mysql_user          = "comic_user_dev"
+mysql_password      = "CHANGE_ME"
+mysql_root_password = "CHANGE_ME"
+
+jwt_secret = "CHANGE_ME"
+secret_key = "CHANGE_ME"
+
+backend_port  = 5000
+frontend_port = 5173

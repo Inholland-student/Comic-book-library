@@ -37,6 +37,12 @@ PY
     exit 1
 }
 
+run_migrations() {
+    echo "[entrypoint] Running database migrations..."
+    flask db upgrade
+    echo "[entrypoint] Migrations complete."
+}
+
 run_import() {
     cmd=(python scripts/load_comics_from_csv.py)
     if [ -n "${IMPORT_CREATED_BY:-}" ]; then
@@ -47,6 +53,8 @@ run_import() {
 }
 
 wait_for_db
+run_migrations
+python scripts/run_init_sql.py
 run_import
 
 exec "$@"
