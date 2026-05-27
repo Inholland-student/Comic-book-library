@@ -245,16 +245,34 @@ jobs:
           COSIGN_EXPERIMENTAL: 1
         run: |
           image_ref="${{ needs.build.outputs.frontend_image }}@${{ needs.build.outputs.frontend_digest }}"
-          cosign verify-attestation --type cyclonedx "$image_ref"
-          cosign verify-attestation --type spdx "$image_ref"
+          identity_regex="^https://github\\.com/${{ github.repository }}/\\.github/workflows/sbom-cosign\\.yml@.*$"
+          cosign verify-attestation \
+            --certificate-oidc-issuer https://token.actions.githubusercontent.com \
+            --certificate-identity-regexp "$identity_regex" \
+            --type cyclonedx \
+            "$image_ref"
+          cosign verify-attestation \
+            --certificate-oidc-issuer https://token.actions.githubusercontent.com \
+            --certificate-identity-regexp "$identity_regex" \
+            --type spdx \
+            "$image_ref"
 
       - name: Verify backend SBOM attestations
         env:
           COSIGN_EXPERIMENTAL: 1
         run: |
           image_ref="${{ needs.build.outputs.backend_image }}@${{ needs.build.outputs.backend_digest }}"
-          cosign verify-attestation --type cyclonedx "$image_ref"
-          cosign verify-attestation --type spdx "$image_ref"
+          identity_regex="^https://github\\.com/${{ github.repository }}/\\.github/workflows/sbom-cosign\\.yml@.*$"
+          cosign verify-attestation \
+            --certificate-oidc-issuer https://token.actions.githubusercontent.com \
+            --certificate-identity-regexp "$identity_regex" \
+            --type cyclonedx \
+            "$image_ref"
+          cosign verify-attestation \
+            --certificate-oidc-issuer https://token.actions.githubusercontent.com \
+            --certificate-identity-regexp "$identity_regex" \
+            --type spdx \
+            "$image_ref"
 
       - name: Summary
         run: |
