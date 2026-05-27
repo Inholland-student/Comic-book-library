@@ -1,0 +1,348 @@
+name: Build, SBOM, and Cosign Sign
+
+# Trigger on pushes to main/develop and manual runs
+on:
+  push:
+    branches:
+      - main
+      - develop
+  workflow_dispatch:
+    inputs:
+      registry:
+        description: 'Container registry (docker | ghcr | local)'
+        required: false
+        default: 'ghcr'
+
+env:
+  # ========== REGISTRY CONFIGURATION ==========
+  # Change these to match your registry setup
+  REGISTRY: ${{ github.event.inputs.registry || 'ghcr.io' }}
+  REGISTRY_USERNAME: ${{ secrets.REGISTRY_USERNAME || github.actor }}
+  REGISTRY_PASSWORD: ${{ secrets.REGISTRY_PASSWORD || secrets.GITHUB_TOKEN }}
+  
+  # ========== IMAGE NAMES ==========
+  FRONTEND_IMAGE_NAME: ${{ github.repository }}/frontend
+  BACKEND_IMAGE_NAME: ${{ github.repository }}/backend
+  
+  # ========== TOOL VERSIONS ==========
+  SYFT_VERSION: v0.105.0
+  COSIGN_VERSION: v2.2.2
+
+jobs:
+  # ========== BUILD IMAGES ==========
+  build:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+      # Required for OIDC token
+      id-token: write
+    
+    outputs:
+      # Export image digests for attestation signing
+      frontend-digest: ${{ steps.build-frontend.outputs.digest }}
+      backend-digest: ${{ steps.build-backend.outputs.digest }}
+      frontend-image-ref: ${{ steps.build-frontend.outputs.image-ref }}
+      backend-image-ref: ${{ steps.build-backend.outputs.image-ref }}
+
+    steps:
+      # ========== CHECKOUT CODE ==========
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      # ========== LOGIN TO REGISTRY ==========
+      - name: Login to Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ env.REGISTRY_USERNAME }}
+          password: ${{ env.REGISTRY_PASSWORD }}
+
+      # ========== BUILD FRONTEND IMAGE ==========
+      - name: Build and push frontend image
+        id: build-frontend
+        uses: docker/build-push-action@v5
+        with:
+          context: ./frontend
+          file: ./frontend/Dockerfile
+          push: true
+          tags: |
+            ${{ env.REGISTRY }}/${{ env.FRONTEND_IMAGE_NAME }}:latest
+            ${{ env.REGISTRY }}/${{ env.FRONTEND_IMAGE_NAME }}:${{ github.sha }}
+          labels: |
+            org.opencontainers.image.title=Comic Book Library Frontend
+            org.opencontainers.image.description=Vue.js frontend for Comic Book Library
+            org.opencontainers.image.version=${{ github.sha }}
+            org.opencontainers.image.revision=${{ github.sha }}
+            org.opencontainers.image.source=${{ github.server_url }}/${{ github.repository }}
+
+      # ========== BUILD BACKEND IMAGE ==========
+      - name: Build and push backend image
+        id: build-backend
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          file: ./backend/Dockerfile
+          push: true
+          tags: |
+            ${{ env.REGISTRY }}/${{ env.BACKEND_IMAGE_NAME }}:latest
+            ${{ env.REGISTRY }}/${{ env.BACKEND_IMAGE_NAME }}:${{ github.sha }}
+          labels: |
+            org.opencontainers.image.title=Comic Book Library Backend
+            org.opencontainers.image.description=Flask backend for Comic Book Library
+            org.opencontainers.image.version=${{ github.sha }}
+            org.opencontainers.image.revision=${{ github.sha }}
+            org.opencontainers.image.source=${{ github.server_url }}/${{ github.repository }}
+
+  # ========== GENERATE SBOM WITH SYFT ==========
+  sbom:
+    runs-on: ubuntu-latest
+    needs: build
+    permissions:
+      contents: read
+      packages: read
+
+    steps:
+      # ========== CHECKOUT CODE ==========
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      # ========== LOGIN TO REGISTRY ==========
+      - name: Login to Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ env.REGISTRY_USERNAME }}
+          password: ${{ env.REGISTRY_PASSWORD }}
+
+      # ========== INSTALL SYFT ==========
+      - name: Install Syft
+        run: |
+          curl -sSfL https://raw.githubusercontent.com/anchore/syft/main/install.sh | \
+            sh -s -- -b /usr/local/bin ${{ env.SYFT_VERSION }}
+          syft --version
+
+      # ========== GENERATE SBOM FOR FRONTEND ==========
+      - name: Generate frontend SBOM (CycloneDX)
+        run: |
+          syft "${{ env.REGISTRY }}/${{ env.FRONTEND_IMAGE_NAME }}:${{ github.sha }}" \
+            -o cyclonedx-json > frontend-sbom-cyclonedx.json
+          cat frontend-sbom-cyclonedx.json
+
+      - name: Generate frontend SBOM (SPDX)
+        run: |
+          syft "${{ env.REGISTRY }}/${{ env.FRONTEND_IMAGE_NAME }}:${{ github.sha }}" \
+            -o spdx-json > frontend-sbom-spdx.json
+          cat frontend-sbom-spdx.json
+
+      # ========== GENERATE SBOM FOR BACKEND ==========
+      - name: Generate backend SBOM (CycloneDX)
+        run: |
+          syft "${{ env.REGISTRY }}/${{ env.BACKEND_IMAGE_NAME }}:${{ github.sha }}" \
+            -o cyclonedx-json > backend-sbom-cyclonedx.json
+          cat backend-sbom-cyclonedx.json
+
+      - name: Generate backend SBOM (SPDX)
+        run: |
+          syft "${{ env.REGISTRY }}/${{ env.BACKEND_IMAGE_NAME }}:${{ github.sha }}" \
+            -o spdx-json > backend-sbom-spdx.json
+          cat backend-sbom-spdx.json
+
+      # ========== UPLOAD SBOM ARTIFACTS ==========
+      - name: Upload SBOM artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: sbom-files
+          path: |
+            frontend-sbom-cyclonedx.json
+            frontend-sbom-spdx.json
+            backend-sbom-cyclonedx.json
+            backend-sbom-spdx.json
+          retention-days: 90
+
+  # ========== SIGN & ATTACH SBOM WITH COSIGN ==========
+  cosign-attest:
+    runs-on: ubuntu-latest
+    needs: [build, sbom]
+    permissions:
+      contents: read
+      packages: write
+      # OIDC token for Cosign keyless signing (Sigstore)
+      id-token: write
+
+    steps:
+      # ========== CHECKOUT CODE ==========
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      # ========== LOGIN TO REGISTRY ==========
+      - name: Login to Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ env.REGISTRY_USERNAME }}
+          password: ${{ env.REGISTRY_PASSWORD }}
+
+      # ========== INSTALL COSIGN ==========
+      - name: Install Cosign
+        run: |
+          curl -sSfL https://github.com/sigstore/cosign/releases/download/${{ env.COSIGN_VERSION }}/cosign-linux-amd64 -o cosign
+          chmod +x cosign
+          sudo mv cosign /usr/local/bin/
+          cosign version
+
+      # ========== DOWNLOAD SBOM ARTIFACTS ==========
+      - name: Download SBOM artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: sbom-files
+
+      # ========== ATTACH SBOM TO FRONTEND IMAGE ==========
+      - name: Attest frontend image SBOM (CycloneDX)
+        env:
+          COSIGN_EXPERIMENTAL: 1
+        run: |
+          # Use image digest for signed references (more secure than tags)
+          IMAGE_REF="${{ env.REGISTRY }}/${{ env.FRONTEND_IMAGE_NAME }}@${{ needs.build.outputs.frontend-digest }}"
+          
+          echo "Attesting frontend image: $IMAGE_REF"
+          
+          cosign attest \
+            --predicate frontend-sbom-cyclonedx.json \
+            --type cyclonedx \
+            "$IMAGE_REF"
+          
+          echo "Frontend SBOM attestation signed successfully"
+
+      - name: Attest frontend image SBOM (SPDX)
+        env:
+          COSIGN_EXPERIMENTAL: 1
+        run: |
+          IMAGE_REF="${{ env.REGISTRY }}/${{ env.FRONTEND_IMAGE_NAME }}@${{ needs.build.outputs.frontend-digest }}"
+          
+          cosign attest \
+            --predicate frontend-sbom-spdx.json \
+            --type spdx \
+            "$IMAGE_REF"
+          
+          echo "Frontend SPDX attestation signed successfully"
+
+      # ========== ATTACH SBOM TO BACKEND IMAGE ==========
+      - name: Attest backend image SBOM (CycloneDX)
+        env:
+          COSIGN_EXPERIMENTAL: 1
+        run: |
+          IMAGE_REF="${{ env.REGISTRY }}/${{ env.BACKEND_IMAGE_NAME }}@${{ needs.build.outputs.backend-digest }}"
+          
+          echo "Attesting backend image: $IMAGE_REF"
+          
+          cosign attest \
+            --predicate backend-sbom-cyclonedx.json \
+            --type cyclonedx \
+            "$IMAGE_REF"
+          
+          echo "Backend SBOM attestation signed successfully"
+
+      - name: Attest backend image SBOM (SPDX)
+        env:
+          COSIGN_EXPERIMENTAL: 1
+        run: |
+          IMAGE_REF="${{ env.REGISTRY }}/${{ env.BACKEND_IMAGE_NAME }}@${{ needs.build.outputs.backend-digest }}"
+          
+          cosign attest \
+            --predicate backend-sbom-spdx.json \
+            --type spdx \
+            "$IMAGE_REF"
+          
+          echo "Backend SPDX attestation signed successfully"
+
+  # ========== VERIFY ATTESTATIONS ==========
+  verify-attestation:
+    runs-on: ubuntu-latest
+    needs: [build, cosign-attest]
+    permissions:
+      contents: read
+      packages: read
+      id-token: write
+
+    steps:
+      # ========== LOGIN TO REGISTRY ==========
+      - name: Login to Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ env.REGISTRY_USERNAME }}
+          password: ${{ env.REGISTRY_PASSWORD }}
+
+      # ========== INSTALL COSIGN ==========
+      - name: Install Cosign
+        run: |
+          curl -sSfL https://github.com/sigstore/cosign/releases/download/${{ env.COSIGN_VERSION }}/cosign-linux-amd64 -o cosign
+          chmod +x cosign
+          sudo mv cosign /usr/local/bin/
+          cosign version
+
+      # ========== VERIFY FRONTEND ATTESTATIONS ==========
+      - name: Verify frontend SBOM attestations
+        env:
+          COSIGN_EXPERIMENTAL: 1
+        run: |
+          IMAGE_REF="${{ env.REGISTRY }}/${{ env.FRONTEND_IMAGE_NAME }}@${{ needs.build.outputs.frontend-digest }}"
+          
+          echo "Verifying attestations for: $IMAGE_REF"
+          
+          # Verify CycloneDX attestation
+          echo "Verifying CycloneDX attestation..."
+          cosign verify-attestation \
+            --type cyclonedx \
+            "$IMAGE_REF"
+          
+          echo "✓ Frontend CycloneDX attestation verified"
+          
+          # Verify SPDX attestation
+          echo "Verifying SPDX attestation..."
+          cosign verify-attestation \
+            --type spdx \
+            "$IMAGE_REF"
+          
+          echo "✓ Frontend SPDX attestation verified"
+
+      # ========== VERIFY BACKEND ATTESTATIONS ==========
+      - name: Verify backend SBOM attestations
+        env:
+          COSIGN_EXPERIMENTAL: 1
+        run: |
+          IMAGE_REF="${{ env.REGISTRY }}/${{ env.BACKEND_IMAGE_NAME }}@${{ needs.build.outputs.backend-digest }}"
+          
+          echo "Verifying attestations for: $IMAGE_REF"
+          
+          # Verify CycloneDX attestation
+          echo "Verifying CycloneDX attestation..."
+          cosign verify-attestation \
+            --type cyclonedx \
+            "$IMAGE_REF"
+          
+          echo "✓ Backend CycloneDX attestation verified"
+          
+          # Verify SPDX attestation
+          echo "Verifying SPDX attestation..."
+          cosign verify-attestation \
+            --type spdx \
+            "$IMAGE_REF"
+          
+          echo "✓ Backend SPDX attestation verified"
+
+      # ========== DISPLAY SUMMARY ==========
+      - name: Summary
+        run: |
+          echo "=========================================="
+          echo "✓ All images built and signed successfully"
+          echo "=========================================="
+          echo ""
+          echo "Frontend Image: ${{ env.REGISTRY }}/${{ env.FRONTEND_IMAGE_NAME }}:${{ github.sha }}"
+          echo "Backend Image:  ${{ env.REGISTRY }}/${{ env.BACKEND_IMAGE_NAME }}:${{ github.sha }}"
+          echo ""
+          echo "SBOM attestations signed with Cosign (Sigstore keyless)"
+          echo "Attestations can be verified with:"
+          echo "  cosign verify-attestation --type cyclonedx <image>"
+          echo "  cosign verify-attestation --type spdx <image>"

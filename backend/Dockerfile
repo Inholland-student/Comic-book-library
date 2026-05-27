@@ -1,5 +1,14 @@
 FROM python:3.11-slim
 
+# OCI Image Metadata (helps with SBOM generation and artifact tracking)
+LABEL org.opencontainers.image.title="Comic Book Library Backend"
+LABEL org.opencontainers.image.description="Flask REST API backend for Comic Book Library"
+LABEL org.opencontainers.image.authors="Comic Book Library Team"
+LABEL org.opencontainers.image.url="https://github.com/meryamdouiri/Comic-book-library"
+LABEL org.opencontainers.image.source="https://github.com/meryamdouiri/Comic-book-library"
+LABEL org.opencontainers.image.documentation="https://github.com/meryamdouiri/Comic-book-library/blob/main/README.md"
+LABEL org.opencontainers.image.vendor="Comic Book Library"
+
 WORKDIR /app
 
 RUN apt-get update && apt-get install -y \
