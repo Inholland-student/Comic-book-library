@@ -1,0 +1,44 @@
+name: Security Scan (Trivy)
+
+on:
+  push:
+    branches: [ main, dev ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  trivy-scan:
+    name: Shift-Left Vulnerability Scan
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Run Trivy File System Scan
+        uses: aquasecurity/trivy-action@master
+        with:
+          scan-type: 'fs'
+          scan-ref: '.'
+          exit-code: '1'
+          severity: 'HIGH,CRITICAL'
+          format: 'table'
+
+      - name: Build Backend Image
+        run: docker build -t comic-backend:latest -f ./backend/Dockerfile .
+
+      - name: Scan Backend Image
+        uses: aquasecurity/trivy-action@master
+        with:
+          image-ref: 'comic-backend:latest'
+          exit-code: '1'
+          severity: 'HIGH,CRITICAL'
+
+      - name: Build Frontend Image
+        run: docker build -t comic-frontend:latest ./frontend
+
+      - name: Scan Frontend Image
+        uses: aquasecurity/trivy-action@master
+        with:
+          image-ref: 'comic-frontend:latest'
+          exit-code: '1'
+          severity: 'HIGH,CRITICAL'
