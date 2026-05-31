@@ -1,17 +1,34 @@
-FROM python:3.11-slim
+FROM python:3.11-slim AS builder
 
-WORKDIR /app
+WORKDIR /build
 
-RUN apt-get update && apt-get install -y \
+RUN apt-get update && apt-get install -y --no-install-recommends \
     gcc \
     default-libmysqlclient-dev \
     && rm -rf /var/lib/apt/lists/*
 
-COPY backend/requirements.txt .
-RUN pip install --no-cache-dir -r requirements.txt
+COPY requirements.txt .
 
-COPY backend/ .
-COPY data ./data
+RUN pip install --no-cache-dir --user -r requirements.txt
+
+
+FROM python:3.11-slim
+
+WORKDIR /app
+
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    libmariadb3 \
+    && rm -rf /var/lib/apt/lists/*
+
+COPY --from=builder /root/.local /home/app/.local
+
+RUN useradd -m -u 1001 -s /bin/sh app && chown -R app:app /app /home/app
+
+USER app
+
+ENV PATH=/home/app/.local/bin:$PATH
+
+COPY --chown=app:app . .
 
 RUN chmod +x entrypoint.sh
 

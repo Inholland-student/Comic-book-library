@@ -2,17 +2,16 @@ FROM node:20-alpine
 
 WORKDIR /app
 
-# Copy package files
 COPY package*.json ./
 
-# Install dependencies
-RUN npm install
+RUN npm ci
 
-# Copy app code
 COPY . .
 
-# Expose port 5173 (Vite default)
+RUN addgroup -S app && adduser -S app -G app && chown -R app:app /app
+
+USER app
+
 EXPOSE 5173
 
-# Run Vite dev server
 CMD ["npm", "run", "dev"]
