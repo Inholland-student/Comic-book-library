@@ -24,7 +24,7 @@ jobs:
           format: 'table'
 
       - name: Build Backend Image
-        run: docker build -t comic-backend:latest -f ./backend/Dockerfile .
+        run: docker build -t comic-backend:latest ./backend
 
       - name: Scan Backend Image
         uses: aquasecurity/trivy-action@master
