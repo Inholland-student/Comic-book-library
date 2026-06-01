@@ -38,11 +38,18 @@ Write-Host "Starting Minikube..."
 Write-Host "Using Minikube Docker environment..."
 & $Minikube docker-env | Invoke-Expression
 
-Write-Host "Building frontend image..."
-docker build -t comic-frontend:latest (Join-Path $RootDir "frontend")
+$TfvarsFullPath = Join-Path $TerraformDir $TfvarsFile
+$FrontendImage = Get-TfvarsValue -FilePath $TfvarsFullPath -Key "frontend_image"
+$BackendImage = Get-TfvarsValue -FilePath $TfvarsFullPath -Key "backend_image"
+
+Write-Host "Building frontend image: $FrontendImage..."
+docker build -t $FrontendImage (Join-Path $RootDir "frontend")
 
 Write-Host "Building backend image..."
 docker build -t comic-backend:latest (Join-Path $RootDir "backend")
+
+Write-Host "Configuring Vault for: $Environment"
+& "$PSScriptRoot/setup-vault.ps1" $Environment
 
 Write-Host "Applying Terraform for: $Environment"
 Push-Location $TerraformDir
