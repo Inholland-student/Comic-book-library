@@ -1,14 +1,7 @@
-resource "kubernetes_secret" "mysql_secret" {
+resource "kubernetes_service_account" "mysql" {
   metadata {
-    name      = "mysql-secret"
+    name      = "mysql"
     namespace = kubernetes_namespace.env.metadata[0].name
-  }
-
-  data = {
-    MYSQL_DATABASE      = var.mysql_database
-    MYSQL_USER          = var.mysql_user
-    MYSQL_PASSWORD      = var.mysql_password
-    MYSQL_ROOT_PASSWORD = var.mysql_root_password
   }
 }
 
@@ -36,9 +29,25 @@ resource "kubernetes_deployment" "mysql" {
         labels = {
           app = "mysql"
         }
+
+        annotations = {
+          "vault.hashicorp.com/agent-inject"                 = "true"
+          "vault.hashicorp.com/role"                         = "comic-mysql-${var.environment}"
+          "vault.hashicorp.com/agent-inject-secret-config"   = "secret/data/comic-book-library/${var.environment}"
+          "vault.hashicorp.com/agent-inject-template-config" = <<EOT
+{{- with secret "secret/data/comic-book-library/${var.environment}" -}}
+export MYSQL_DATABASE="{{ .Data.data.MYSQL_DATABASE }}"
+export MYSQL_USER="{{ .Data.data.MYSQL_USER }}"
+export MYSQL_PASSWORD="{{ .Data.data.MYSQL_PASSWORD }}"
+export MYSQL_ROOT_PASSWORD="{{ .Data.data.MYSQL_ROOT_PASSWORD }}"
+{{- end }}
+EOT
+        }
       }
 
       spec {
+        service_account_name = kubernetes_service_account.mysql.metadata[0].name
+
         container {
           name  = "mysql"
           image = var.mysql_image
@@ -47,11 +56,9 @@ resource "kubernetes_deployment" "mysql" {
             container_port = var.mysql_port
           }
 
-          env_from {
-            secret_ref {
-              name = kubernetes_secret.mysql_secret.metadata[0].name
-            }
-          }
+          command = ["/bin/sh", "-c"]
+
+          args = ["tr -d '\\r' < /vault/secrets/config > /tmp/vault-env && . /tmp/vault-env && exec docker-entrypoint.sh mysqld"]
         }
       }
     }

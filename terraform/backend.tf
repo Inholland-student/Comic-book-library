@@ -1,12 +1,7 @@
-resource "kubernetes_secret" "backend_secret" {
+resource "kubernetes_service_account" "backend" {
   metadata {
-    name      = "backend-secret"
+    name      = "backend"
     namespace = kubernetes_namespace.env.metadata[0].name
-  }
-
-  data = {
-    JWT_SECRET = var.jwt_secret
-    SECRET_KEY = var.secret_key
   }
 }
 
@@ -34,9 +29,26 @@ resource "kubernetes_deployment" "backend" {
         labels = {
           app = "backend"
         }
+
+        annotations = {
+          "vault.hashicorp.com/agent-inject"                 = "true"
+          "vault.hashicorp.com/role"                         = "comic-backend-${var.environment}"
+          "vault.hashicorp.com/agent-inject-secret-config"   = "secret/data/comic-book-library/${var.environment}"
+          "vault.hashicorp.com/agent-inject-template-config" = <<EOT
+{{- with secret "secret/data/comic-book-library/${var.environment}" -}}
+export DB_NAME="{{ .Data.data.MYSQL_DATABASE }}"
+export DB_USER="{{ .Data.data.MYSQL_USER }}"
+export DB_PASSWORD="{{ .Data.data.MYSQL_PASSWORD }}"
+export JWT_SECRET="{{ .Data.data.JWT_SECRET }}"
+export SECRET_KEY="{{ .Data.data.SECRET_KEY }}"
+{{- end }}
+EOT
+        }
       }
 
       spec {
+        service_account_name = kubernetes_service_account.backend.metadata[0].name
+
         container {
           name              = "backend"
           image             = var.backend_image
@@ -45,6 +57,10 @@ resource "kubernetes_deployment" "backend" {
           port {
             container_port = var.backend_port
           }
+
+          command = ["/bin/sh", "-c"]
+
+          args = ["tr -d '\\r' < /vault/secrets/config > /tmp/vault-env && . /tmp/vault-env && exec ./entrypoint.sh python run.py"]
 
           env {
             name  = "APP_ENV"
@@ -64,49 +80,6 @@ resource "kubernetes_deployment" "backend" {
           env {
             name  = "DB_PORT"
             value = tostring(var.mysql_port)
-          }
-
-          env {
-            name  = "DB_NAME"
-            value = var.mysql_database
-          }
-
-          env {
-            name  = "DB_USER"
-            value = var.mysql_user
-          }
-
-          env {
-            name = "DB_PASSWORD"
-
-            value_from {
-              secret_key_ref {
-                name = kubernetes_secret.mysql_secret.metadata[0].name
-                key  = "MYSQL_PASSWORD"
-              }
-            }
-          }
-
-          env {
-            name = "JWT_SECRET"
-
-            value_from {
-              secret_key_ref {
-                name = kubernetes_secret.backend_secret.metadata[0].name
-                key  = "JWT_SECRET"
-              }
-            }
-          }
-
-          env {
-            name = "SECRET_KEY"
-
-            value_from {
-              secret_key_ref {
-                name = kubernetes_secret.backend_secret.metadata[0].name
-                key  = "SECRET_KEY"
-              }
-            }
           }
         }
       }

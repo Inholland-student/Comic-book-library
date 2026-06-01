@@ -38,6 +38,21 @@ output "backend_internal_url" {
   value       = "http://${kubernetes_service.backend.metadata[0].name}:${var.backend_port}"
 }
 
+output "vault_secret_path" {
+  description = "Vault secret path used by this environment"
+  value       = "secret/data/comic-book-library/${var.environment}"
+}
+
+output "vault_backend_role" {
+  description = "Vault Kubernetes auth role expected by backend"
+  value       = "comic-backend-${var.environment}"
+}
+
+output "vault_mysql_role" {
+  description = "Vault Kubernetes auth role expected by MySQL"
+  value       = "comic-mysql-${var.environment}"
+}
+
 output "open_frontend_command" {
   description = "Command to open frontend in Minikube"
   value       = "minikube service ${kubernetes_service.frontend.metadata[0].name} -n ${kubernetes_namespace.env.metadata[0].name}"
@@ -56,4 +71,14 @@ output "check_pods_command" {
 output "check_services_command" {
   description = "Command to check services in this environment"
   value       = "kubectl get services -n ${kubernetes_namespace.env.metadata[0].name}"
+}
+
+output "check_backend_logs_command" {
+  description = "Command to check backend logs"
+  value       = "kubectl logs -n ${kubernetes_namespace.env.metadata[0].name} deploy/backend -c backend"
+}
+
+output "check_mysql_logs_command" {
+  description = "Command to check MySQL logs"
+  value       = "kubectl logs -n ${kubernetes_namespace.env.metadata[0].name} deploy/mysql -c mysql"
 }

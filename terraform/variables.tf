@@ -50,18 +50,6 @@ variable "flask_env" {
   default     = "production"
 }
 
-variable "jwt_secret" {
-  type        = string
-  description = "JWT secret for backend"
-  sensitive   = true
-}
-
-variable "secret_key" {
-  type        = string
-  description = "Flask secret key"
-  sensitive   = true
-}
-
 variable "backend_port" {
   type    = number
   default = 5000
@@ -81,28 +69,6 @@ variable "mysql_port" {
   type        = number
   description = "MySQL port"
   default     = 3306
-}
-
-variable "mysql_database" {
-  type        = string
-  description = "MySQL database name"
-}
-
-variable "mysql_user" {
-  type        = string
-  description = "MySQL user"
-}
-
-variable "mysql_password" {
-  type        = string
-  description = "MySQL user password"
-  sensitive   = true
-}
-
-variable "mysql_root_password" {
-  type        = string
-  description = "MySQL root password"
-  sensitive   = true
 }
 
 # --------------------
