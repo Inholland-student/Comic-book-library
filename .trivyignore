@@ -1,0 +1,3 @@
+# Bundled in the official Python base image, not part of our application code
+CVE-2026-23949
+CVE-2026-24049

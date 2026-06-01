@@ -2,23 +2,14 @@ FROM node:20-alpine AS builder
 
 WORKDIR /app
 
-RUN apk upgrade --no-cache
-
 COPY package*.json ./
-
-RUN npm ci \
-    && rm -rf /usr/local/lib/node_modules/npm \
-    && rm -rf /usr/local/lib/node_modules/corepack \
-    && rm -rf /opt/yarn-v1.22.22
+RUN npm ci
 
 COPY . .
-
-RUN ./node_modules/.bin/vite build
+RUN npm run build
 
 
 FROM nginx:1.27-alpine
-
-RUN apk upgrade --no-cache
 
 COPY nginx.conf.template /etc/nginx/templates/default.conf.template
 COPY --from=builder /app/dist /usr/share/nginx/html

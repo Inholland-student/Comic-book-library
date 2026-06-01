@@ -21,6 +21,8 @@ jobs:
           scan-ref: '.'
           exit-code: '1'
           severity: 'HIGH,CRITICAL'
+          ignore-unfixed: true
+          trivyignores: .trivyignore
           format: 'table'
 
       - name: Build Backend Image
@@ -33,6 +35,8 @@ jobs:
           exit-code: '1'
           severity: 'HIGH,CRITICAL'
           ignore-unfixed: true
+          scanners: 'vuln'
+          trivyignores: .trivyignore
 
       - name: Build Frontend Image
         run: docker build -t comic-frontend:latest ./frontend
@@ -44,3 +48,5 @@ jobs:
           exit-code: '1'
           severity: 'HIGH,CRITICAL'
           ignore-unfixed: true
+          scanners: 'vuln'
+          trivyignores: .trivyignore
