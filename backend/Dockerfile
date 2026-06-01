@@ -2,12 +2,16 @@ FROM python:3.11-slim AS builder
 
 WORKDIR /build
 
-RUN apt-get update && apt-get install -y --no-install-recommends \
+RUN apt-get update && apt-get upgrade -y && apt-get install -y \
     gcc \
     default-libmysqlclient-dev \
     && rm -rf /var/lib/apt/lists/*
 
-COPY requirements.txt .
+COPY backend/requirements.txt .
+
+RUN pip install --no-cache-dir --upgrade pip setuptools wheel>=0.46.2 \
+    && rm -rf /usr/local/lib/python3.11/site-packages/wheel-0.45.1.dist-info \
+    && pip install --no-cache-dir -r requirements.txt
 
 RUN pip install --no-cache-dir --user -r requirements.txt
 

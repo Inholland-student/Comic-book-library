@@ -1,5 +1,7 @@
 FROM node:20-alpine
 
+RUN npm install -g npm@latest
+
 WORKDIR /app
 
 COPY package*.json ./
@@ -14,4 +16,5 @@ USER app
 
 EXPOSE 5173
 
+# Run Vite dev server
 CMD ["npm", "run", "dev"]
