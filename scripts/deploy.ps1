@@ -6,9 +6,18 @@ param(
 
 $ErrorActionPreference = "Stop"
 
+# --- NEW: SECURITY GATE ---
+Write-Host "Verification: Running security checks before deployment..." -ForegroundColor Cyan
+& "$PSScriptRoot/check-sec.ps1"
+if ($LASTEXITCODE -ne 0) {
+    Write-Error "Deployment aborted due to security vulnerabilities."
+    exit 1
+}
+Write-Host "Security checks passed!" -ForegroundColor Green
+# --------------------------
+
 . "$PSScriptRoot/common.ps1"
 
-# Full paths, so script does not depend on PATH
 $Minikube = Get-RequiredCommand "minikube"
 $Terraform = Get-RequiredCommand "terraform"
 $Kubectl = Get-RequiredCommand "kubectl"
@@ -19,18 +28,9 @@ $Namespace = "comic-library-$Environment"
 $TfvarsFile = "envs/$Environment.tfvars"
 
 Write-Host "Checking required tools..."
-
-if (!(Test-Path $Minikube)) {
-    throw "Minikube not found at $Minikube"
-}
-
-if (!(Test-Path $Terraform)) {
-    throw "Terraform not found at $Terraform"
-}
-
-if (!(Test-Path $Kubectl)) {
-    throw "kubectl not found at $Kubectl"
-}
+if (!(Test-Path $Minikube)) { throw "Minikube not found at $Minikube" }
+if (!(Test-Path $Terraform)) { throw "Terraform not found at $Terraform" }
+if (!(Test-Path $Kubectl)) { throw "kubectl not found at $Kubectl" }
 
 Write-Host "Starting Minikube..."
 & $Minikube start
@@ -39,34 +39,25 @@ Write-Host "Using Minikube Docker environment..."
 & $Minikube docker-env | Invoke-Expression
 
 $TfvarsFullPath = Join-Path $TerraformDir $TfvarsFile
-$FrontendImage  = Get-TfvarsValue -FilePath $TfvarsFullPath -Key "frontend_image"
-$BackendImage   = Get-TfvarsValue -FilePath $TfvarsFullPath -Key "backend_image"
+$FrontendImage = Get-TfvarsValue -FilePath $TfvarsFullPath -Key "frontend_image"
+$BackendImage = Get-TfvarsValue -FilePath $TfvarsFullPath -Key "backend_image"
 
 Write-Host "Building frontend image: $FrontendImage..."
 docker build -t $FrontendImage (Join-Path $RootDir "frontend")
 
-Write-Host "Building backend image: $BackendImage..."
-docker build -t $BackendImage -f (Join-Path $RootDir "backend/Dockerfile") $RootDir
+Write-Host "Building backend image..."
+docker build -t comic-backend:latest (Join-Path $RootDir "backend")
 
 Write-Host "Configuring Vault for: $Environment"
 & "$PSScriptRoot/setup-vault.ps1" $Environment
 
 Write-Host "Applying Terraform for: $Environment"
 Push-Location $TerraformDir
-
 & $Terraform init
-
 $workspaceExists = & $Terraform workspace list | Select-String -Pattern "^\*?\s*$Environment$"
-
-if ($workspaceExists) {
-    & $Terraform workspace select $Environment
-}
-else {
-    & $Terraform workspace new $Environment
-}
-
+if ($workspaceExists) { & $Terraform workspace select $Environment }
+else { & $Terraform workspace new $Environment }
 & $Terraform apply "-var-file=$TfvarsFile" -auto-approve
-
 Pop-Location
 
 Write-Host "Restarting app deployments..."
@@ -77,16 +68,5 @@ Write-Host "Waiting for rollouts..."
 & $Kubectl rollout status deployment/frontend -n $Namespace
 & $Kubectl rollout status deployment/backend -n $Namespace
 
-Write-Host ""
-Write-Host "Deployment finished."
-Write-Host ""
-Write-Host "Check resources:"
-Write-Host ".\scripts\status.ps1 $Environment"
-Write-Host ""
-Write-Host "Open services manually:"
-Write-Host ".\scripts\open.ps1 frontend $Environment"
-Write-Host ".\scripts\open.ps1 phpmyadmin $Environment"
-Write-Host ""
-
-Write-Host "Opening frontend..."
+Write-Host "`nDeployment finished.`n"
 & "$PSScriptRoot/open.ps1" frontend $Environment
