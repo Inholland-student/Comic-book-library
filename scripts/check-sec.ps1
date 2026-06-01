@@ -12,7 +12,7 @@ if ($LASTEXITCODE -ne 0) {
 
 # 2. Build and Scan Backend Image
 Write-Host "`nStep 2: Building and Scanning Backend Image..." -ForegroundColor Yellow
-docker build -t comic-backend:latest -f ./backend/Dockerfile .
+docker build -t comic-backend:latest ./backend
 docker run --rm -v /var/run/docker.sock:/var/run/docker.sock aquasec/trivy image --exit-code 1 --severity HIGH,CRITICAL comic-backend:latest
 
 if ($LASTEXITCODE -ne 0) {
