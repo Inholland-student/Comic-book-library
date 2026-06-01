@@ -42,7 +42,7 @@ Write-Host "Building frontend image..."
 docker build -t comic-frontend:latest (Join-Path $RootDir "frontend")
 
 Write-Host "Building backend image..."
-docker build -t comic-backend:latest -f (Join-Path $RootDir "backend/Dockerfile") $RootDir
+docker build -t comic-backend:latest (Join-Path $RootDir "backend")
 
 Write-Host "Applying Terraform for: $Environment"
 Push-Location $TerraformDir
