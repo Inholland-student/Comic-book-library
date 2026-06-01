@@ -1,3 +1,5 @@
 # Bundled in the official Python base image, not part of our application code
 CVE-2026-23949
 CVE-2026-24049
+# nginx:alpine base image; fix available in Alpine but not always in the pinned image yet
+CVE-2026-6732

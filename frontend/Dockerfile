@@ -11,7 +11,7 @@ RUN npm run build
 
 FROM nginx:1.27-alpine
 
-RUN apk upgrade --no-cache
+RUN apk update && apk upgrade --no-cache
 
 COPY nginx.conf.template /etc/nginx/templates/default.conf.template
 COPY --from=builder /app/dist /usr/share/nginx/html
