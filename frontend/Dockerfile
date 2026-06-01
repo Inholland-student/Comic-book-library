@@ -6,7 +6,10 @@ RUN apk upgrade --no-cache
 
 COPY package*.json ./
 
-RUN npm ci
+RUN npm ci \
+    && rm -rf /usr/local/lib/node_modules/npm \
+    && rm -rf /usr/local/lib/node_modules/corepack \
+    && rm -rf /opt/yarn-v1.22.22
 
 COPY . .
 
@@ -16,4 +19,4 @@ USER app
 
 EXPOSE 5173
 
-CMD ["npm", "run", "dev"]
+CMD ["./node_modules/.bin/vite", "--host", "0.0.0.0", "--port", "5173"]
