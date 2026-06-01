@@ -251,13 +251,15 @@ jobs:
             --certificate-identity-regexp "$identity_regex" \
             --private-infrastructure \
             --type cyclonedx \
-            "$image_ref" > /dev/null
+            --output-file frontend-attestation-cyclonedx.json \
+            "$image_ref"
           cosign verify-attestation \
             --certificate-oidc-issuer https://token.actions.githubusercontent.com \
             --certificate-identity-regexp "$identity_regex" \
             --private-infrastructure \
             --type spdx \
-            "$image_ref" > /dev/null
+            --output-file frontend-attestation-spdx.json \
+            "$image_ref"
           echo "Frontend attestations verified"
 
       - name: Verify backend SBOM attestations
@@ -271,14 +273,24 @@ jobs:
             --certificate-identity-regexp "$identity_regex" \
             --private-infrastructure \
             --type cyclonedx \
-            "$image_ref" > /dev/null
+            --output-file backend-attestation-cyclonedx.json \
+            "$image_ref"
           cosign verify-attestation \
             --certificate-oidc-issuer https://token.actions.githubusercontent.com \
             --certificate-identity-regexp "$identity_regex" \
             --private-infrastructure \
             --type spdx \
-            "$image_ref" > /dev/null
+            --output-file backend-attestation-spdx.json \
+            "$image_ref"
           echo "Backend attestations verified"
+
+      - name: Upload attestation results
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: attestation-results
+          path: '*-attestation-*.json'
+          retention-days: 90
 
       - name: Summary
         run: |
