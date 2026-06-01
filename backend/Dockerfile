@@ -2,7 +2,8 @@ FROM python:3.11-slim AS builder
 
 WORKDIR /build
 
-RUN apt-get update && apt-get install -y --no-install-recommends \
+RUN apt-get update && apt-get upgrade -y --no-install-recommends \
+    && apt-get install -y --no-install-recommends \
     gcc \
     default-libmysqlclient-dev \
     && rm -rf /var/lib/apt/lists/*
@@ -16,7 +17,8 @@ FROM python:3.11-slim
 
 WORKDIR /app
 
-RUN apt-get update && apt-get install -y --no-install-recommends \
+RUN apt-get update && apt-get upgrade -y --no-install-recommends \
+    && apt-get install -y --no-install-recommends \
     libmariadb3 \
     && rm -rf /var/lib/apt/lists/*
 

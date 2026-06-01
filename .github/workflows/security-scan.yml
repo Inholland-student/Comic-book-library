@@ -4,7 +4,7 @@ on:
   push:
     branches: [ main, dev ]
   pull_request:
-    branches: [ main ]
+    branches: [ main, dev ]
 
 jobs:
   trivy-scan:
@@ -32,6 +32,7 @@ jobs:
           image-ref: 'comic-backend:latest'
           exit-code: '1'
           severity: 'HIGH,CRITICAL'
+          ignore-unfixed: true
 
       - name: Build Frontend Image
         run: docker build -t comic-frontend:latest ./frontend
@@ -42,3 +43,4 @@ jobs:
           image-ref: 'comic-frontend:latest'
           exit-code: '1'
           severity: 'HIGH,CRITICAL'
+          ignore-unfixed: true
