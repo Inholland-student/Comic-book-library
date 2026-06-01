@@ -23,7 +23,8 @@ jobs:
           severity: 'HIGH,CRITICAL'
           ignore-unfixed: true
           trivyignores: .trivyignore
-          format: 'table'
+          format: 'json'
+          output: 'trivy-fs-results.json'
 
       - name: Build Backend Image
         run: docker build -t comic-backend:latest ./backend
@@ -37,6 +38,8 @@ jobs:
           ignore-unfixed: true
           scanners: 'vuln'
           trivyignores: .trivyignore
+          format: 'json'
+          output: 'trivy-backend-results.json'
 
       - name: Build Frontend Image
         run: docker build -t comic-frontend:latest ./frontend
@@ -50,3 +53,12 @@ jobs:
           ignore-unfixed: true
           scanners: 'vuln'
           trivyignores: .trivyignore
+          format: 'json'
+          output: 'trivy-frontend-results.json'
+
+      - name: Upload Trivy Scan Results
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: trivy-results
+          path: 'trivy-*-results.json'

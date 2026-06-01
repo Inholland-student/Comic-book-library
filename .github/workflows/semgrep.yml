@@ -1,0 +1,37 @@
+name: Semgrep SAST
+
+on:
+  push:
+    branches: [main, dev]
+  pull_request:
+    branches: [main, dev]
+
+jobs:
+  semgrep:
+    name: Semgrep Static Analysis
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Install Semgrep
+        run: pip install semgrep
+
+      - name: Run Semgrep (JSON)
+        run: |
+          semgrep \
+            --config=auto \
+            --json \
+            --output=semgrep-results.json \
+            --severity=WARNING \
+            --severity=ERROR \
+            . || true
+
+      - name: Upload Semgrep results
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: semgrep-results
+          path: semgrep-results.json
+          retention-days: 90
