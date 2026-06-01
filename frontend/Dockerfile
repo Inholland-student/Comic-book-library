@@ -1,4 +1,4 @@
-FROM node:20-alpine
+FROM node:20-alpine AS builder
 
 WORKDIR /app
 
@@ -13,10 +13,16 @@ RUN npm ci \
 
 COPY . .
 
-RUN addgroup -S app && adduser -S app -G app && chown -R app:app /app
+RUN npm run build
 
-USER app
+
+FROM nginx:1.27-alpine
+
+RUN apk upgrade --no-cache
+
+COPY nginx.conf.template /etc/nginx/templates/default.conf.template
+COPY --from=builder /app/dist /usr/share/nginx/html
+
+ENV BACKEND_PROXY_TARGET=http://127.0.0.1:5000
 
 EXPOSE 5173
-
-CMD ["./node_modules/.bin/vite", "--host", "0.0.0.0", "--port", "5173"]
