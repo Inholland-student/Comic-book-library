@@ -1,6 +1,16 @@
 .venv
-venv
 __pycache__
 *.pyc
 *.pyo
+*.pyd
+.git
+.gitignore
+.env
+.env.local
 .pytest_cache
+.coverage
+htmlcov
+dist
+build
+*.egg-info
+.DS_Store
