@@ -11,6 +11,8 @@ on:
         required: false
         default: ghcr.io
 
+permissions: {}
+
 env:
   REGISTRY: ${{ github.event.inputs.registry || 'ghcr.io' }}
   REGISTRY_USERNAME: ${{ secrets.REGISTRY_USERNAME || github.actor }}

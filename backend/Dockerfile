@@ -15,7 +15,11 @@ RUN pip install --no-cache-dir protobuf>=6.33.5 && pip install --no-cache-dir -r
 
 COPY . .
 
-RUN chmod +x entrypoint.sh
+RUN chmod +x entrypoint.sh \
+    && useradd --no-create-home --shell /bin/false appuser \
+    && chown -R appuser:appuser /app
+
+USER appuser
 
 EXPOSE 5000
 

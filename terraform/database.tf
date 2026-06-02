@@ -48,6 +48,13 @@ EOT
       spec {
         service_account_name = kubernetes_service_account.mysql.metadata[0].name
 
+        security_context {
+          fs_group = 999
+          seccomp_profile {
+            type = "RuntimeDefault"
+          }
+        }
+
         container {
           name  = "mysql"
           image = var.mysql_image
@@ -59,6 +66,41 @@ EOT
           command = ["/bin/sh", "-c"]
 
           args = ["tr -d '\\r' < /vault/secrets/config > /tmp/vault-env && . /tmp/vault-env && exec docker-entrypoint.sh mysqld"]
+
+          resources {
+            requests = {
+              cpu    = "250m"
+              memory = "512Mi"
+            }
+            limits = {
+              cpu    = "500m"
+              memory = "1Gi"
+            }
+          }
+
+          liveness_probe {
+            exec {
+              command = ["mysqladmin", "ping", "-h", "127.0.0.1"]
+            }
+            initial_delay_seconds = 30
+            period_seconds        = 10
+            timeout_seconds       = 5
+            failure_threshold     = 3
+          }
+
+          readiness_probe {
+            exec {
+              command = ["mysqladmin", "ping", "-h", "127.0.0.1"]
+            }
+            initial_delay_seconds = 10
+            period_seconds        = 5
+            timeout_seconds       = 3
+            failure_threshold     = 3
+          }
+
+          security_context {
+            allow_privilege_escalation = false
+          }
         }
       }
     }

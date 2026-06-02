@@ -49,6 +49,16 @@ EOT
       spec {
         service_account_name = kubernetes_service_account.backend.metadata[0].name
 
+        security_context {
+          run_as_non_root = true
+          run_as_user     = 1000
+          run_as_group    = 1000
+          fs_group        = 1000
+          seccomp_profile {
+            type = "RuntimeDefault"
+          }
+        }
+
         container {
           name              = "backend"
           image             = var.backend_image
@@ -80,6 +90,49 @@ EOT
           env {
             name  = "DB_PORT"
             value = tostring(var.mysql_port)
+          }
+
+          resources {
+            requests = {
+              cpu    = "100m"
+              memory = "256Mi"
+            }
+            limits = {
+              cpu    = "500m"
+              memory = "512Mi"
+            }
+          }
+
+          liveness_probe {
+            http_get {
+              path = "/health"
+              port = var.backend_port
+            }
+            initial_delay_seconds = 15
+            period_seconds        = 20
+            timeout_seconds       = 5
+            failure_threshold     = 3
+          }
+
+          readiness_probe {
+            http_get {
+              path = "/health"
+              port = var.backend_port
+            }
+            initial_delay_seconds = 10
+            period_seconds        = 10
+            timeout_seconds       = 3
+            failure_threshold     = 3
+          }
+
+          security_context {
+            allow_privilege_escalation = false
+            read_only_root_filesystem  = false
+            run_as_non_root            = true
+            run_as_user                = 1000
+            capabilities {
+              drop = ["ALL"]
+            }
           }
         }
       }
