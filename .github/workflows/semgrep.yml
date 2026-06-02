@@ -1,8 +1,6 @@
 name: Semgrep SAST
 
 on:
-  push:
-    branches: [main, dev]
   pull_request:
     branches: [main, dev]
 
@@ -24,9 +22,8 @@ jobs:
             --config=auto \
             --json \
             --output=semgrep-results.json \
-            --severity=WARNING \
             --severity=ERROR \
-            . || true
+            .
 
       - name: Upload Semgrep results
         uses: actions/upload-artifact@v4

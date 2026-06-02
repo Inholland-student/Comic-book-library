@@ -1,8 +1,6 @@
 name: Checkov IaC Scan
 
 on:
-  push:
-    branches: [main, dev]
   pull_request:
     branches: [main, dev]
 
@@ -21,7 +19,7 @@ jobs:
           directory: .
           output_format: json
           output_file_path: checkov-results.json
-          soft_fail: true
+          soft_fail: false
 
       - name: Upload Checkov results
         uses: actions/upload-artifact@v4

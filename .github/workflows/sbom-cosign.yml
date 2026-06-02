@@ -2,10 +2,8 @@ name: Build, SBOM, and Cosign Sign
 
 on:
   push:
-    branches:
-      - main
-      - develop
-      - dev
+    branches: [ main, dev ]
+
   workflow_dispatch:
     inputs:
       registry:
