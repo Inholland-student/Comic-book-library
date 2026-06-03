@@ -605,12 +605,8 @@ metadata:
     # selector targets this pod; it is ephemeral and receives no inbound traffic. A readiness
     # probe on a one-shot Helm test pod has no operational meaning and is architecturally
     # inappropriate for the restartPolicy=Never lifecycle.
-    checkov.io/skip1: "CKV_K8S_8=Helm test hook with restartPolicy=Never. Liveness probes
-      restart stuck long-running services; they have no effect on one-shot pods and would
-      fire after the test has already completed."
-    checkov.io/skip2: "CKV_K8S_9=Helm test hook with restartPolicy=Never. Readiness probes
-      gate Service traffic routing; no Service targets this pod and it receives no inbound
-      connections. The control is architecturally inapplicable to one-shot test pods."
+    checkov.io/skip1: "CKV_K8S_8=Helm test hook with restartPolicy Never. Liveness probes restart long-running services; they are meaningless on one-shot pods and fire after the test has already completed."
+    checkov.io/skip2: "CKV_K8S_9=Helm test hook with restartPolicy Never. Readiness probes gate Service traffic routing; no Service targets this pod so the control is architecturally inapplicable."
 spec:
   restartPolicy: Never
   # Test pod only calls the Vault HTTP API; it does not need the Kubernetes API.
