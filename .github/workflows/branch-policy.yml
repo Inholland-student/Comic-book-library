@@ -1,0 +1,25 @@
+name: Branch Policy
+
+on:
+  pull_request:
+    branches: [main]
+
+permissions:
+  contents: read
+  pull-requests: read
+
+jobs:
+  check-source-branch:
+    name: Source Branch Check
+    runs-on: ubuntu-latest
+    steps:
+      - name: Enforce PRs to main come from dev
+        env:
+          HEAD_REF: ${{ github.head_ref }}
+        run: |
+          if [ "$HEAD_REF" != "dev" ]; then
+            echo "ERROR: PRs to main must come from the dev branch."
+            echo "This PR is from: $HEAD_REF"
+            exit 1
+          fi
+          echo "OK: PR source branch is dev."

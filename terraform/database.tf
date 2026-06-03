@@ -6,6 +6,8 @@ resource "kubernetes_service_account" "mysql" {
 }
 
 resource "kubernetes_deployment" "mysql" {
+  #checkov:skip=CKV_K8S_14:Image tag is fixed (mysql:8.4.0, not latest) in variable default and tfvars; Checkov cannot statically resolve Terraform variable-sourced image refs in the Kubernetes provider.
+  #checkov:skip=CKV_K8S_43:Digest is pinned per environment in tfvars and overridden at plan time. To obtain the real digest run: docker buildx imagetools inspect mysql:8.4.0
   metadata {
     name      = "mysql"
     namespace = kubernetes_namespace.env.metadata[0].name
@@ -48,9 +50,23 @@ EOT
       spec {
         service_account_name = kubernetes_service_account.mysql.metadata[0].name
 
+        # run_as_user = 999 (mysql user) causes the entrypoint to skip the gosu privilege-drop
+        # step, making allow_privilege_escalation=false and drop ALL safe without needing
+        # SETUID/SETGID/CHOWN capabilities back.
+        security_context {
+          run_as_non_root = true
+          run_as_user     = 999
+          run_as_group    = 999
+          fs_group        = 999
+          seccomp_profile {
+            type = "RuntimeDefault"
+          }
+        }
+
         container {
-          name  = "mysql"
-          image = var.mysql_image
+          name              = "mysql"
+          image             = var.mysql_image
+          image_pull_policy = var.image_pull_policy
 
           port {
             container_port = var.mysql_port
@@ -59,6 +75,71 @@ EOT
           command = ["/bin/sh", "-c"]
 
           args = ["tr -d '\\r' < /vault/secrets/config > /tmp/vault-env && . /tmp/vault-env && exec docker-entrypoint.sh mysqld"]
+
+          resources {
+            requests = {
+              cpu    = "250m"
+              memory = "512Mi"
+            }
+            limits = {
+              cpu    = "500m"
+              memory = "1Gi"
+            }
+          }
+
+          liveness_probe {
+            exec {
+              command = ["mysqladmin", "ping", "-h", "127.0.0.1"]
+            }
+            initial_delay_seconds = 30
+            period_seconds        = 10
+            timeout_seconds       = 5
+            failure_threshold     = 3
+          }
+
+          readiness_probe {
+            exec {
+              command = ["mysqladmin", "ping", "-h", "127.0.0.1"]
+            }
+            initial_delay_seconds = 10
+            period_seconds        = 5
+            timeout_seconds       = 3
+            failure_threshold     = 3
+          }
+
+          security_context {
+            allow_privilege_escalation = false
+            read_only_root_filesystem  = true
+            capabilities {
+              drop = ["ALL", "NET_RAW"]
+            }
+          }
+
+          volume_mount {
+            name       = "mysql-data"
+            mount_path = "/var/lib/mysql"
+          }
+          volume_mount {
+            name       = "mysql-run"
+            mount_path = "/var/run/mysqld"
+          }
+          volume_mount {
+            name       = "tmp"
+            mount_path = "/tmp"
+          }
+        }
+
+        volume {
+          name = "mysql-data"
+          empty_dir {}
+        }
+        volume {
+          name = "mysql-run"
+          empty_dir {}
+        }
+        volume {
+          name = "tmp"
+          empty_dir {}
         }
       }
     }

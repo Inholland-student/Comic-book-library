@@ -48,7 +48,7 @@ $Namespace = "comic-library-$Environment"
 # ── Helper: run a vault command inside the vault-0 pod ──────────────────────
 function Invoke-Vault {
     param([string[]]$VaultArgs)
-    $result = & $Kubectl exec vault-0 `
+    $result = & $Kubectl exec vault-0 -n vault `
         -- env "VAULT_TOKEN=$VaultToken" vault @VaultArgs 2>&1
     if ($LASTEXITCODE -ne 0) {
         # Surface the error as a string so callers can choose to swallow it
@@ -60,7 +60,7 @@ function Invoke-Vault {
 # ── Helper: run a shell command inside vault-0 ──────────────────────────────
 function Invoke-VaultShell {
     param([string]$ShellCommand)
-    $result = & $Kubectl exec vault-0 `
+    $result = & $Kubectl exec vault-0 -n vault `
         -- /bin/sh -c $ShellCommand 2>&1
     if ($LASTEXITCODE -ne 0) { throw ($result -join "`n") }
     return $result

@@ -1,0 +1,12 @@
+{
+  "permissions": {
+    "allow": [
+      "PowerShell(Get-ChildItem -Path \"d:\\\\Coding\\\\Inholland\\\\Year 3\\\\term 4\\\\shsv\\\\Comic-book-library\\\\frontend\" -Exclude node_modules | Select-Object Name, @{N=\"Type\";E={if\\($_.PSIsContainer\\){\"DIR\"}else{\"FILE\"}}} | Format-Table -AutoSize)",
+      "PowerShell(Get-ChildItem -Path \"d:\\\\Coding\\\\Inholland\\\\Year 3\\\\term 4\\\\shsv\\\\Comic-book-library\\\\backend\\\\app\" -Recurse | Select-Object FullName | ForEach-Object {$_.FullName -replace [regex]::Escape\\(\"d:\\\\Coding\\\\Inholland\\\\Year 3\\\\term 4\\\\shsv\\\\Comic-book-library\\\\\"\\), \"\"})",
+      "PowerShell(Get-ChildItem -Path \"d:\\\\Coding\\\\Inholland\\\\Year 3\\\\term 4\\\\shsv\\\\Comic-book-library\\\\frontend\\\\src\" -Recurse | Select-Object FullName | ForEach-Object {$_.FullName -replace [regex]::Escape\\(\"d:\\\\Coding\\\\Inholland\\\\Year 3\\\\term 4\\\\shsv\\\\Comic-book-library\\\\\"\\), \"\"})",
+      "PowerShell(Get-ChildItem -Path \"d:\\\\Coding\\\\Inholland\\\\Year 3\\\\term 4\\\\shsv\\\\Comic-book-library\\\\kubernetes\" -Recurse | Select-Object FullName | ForEach-Object {$_.FullName -replace [regex]::Escape\\(\"d:\\\\Coding\\\\Inholland\\\\Year 3\\\\term 4\\\\shsv\\\\Comic-book-library\\\\\"\\), \"\"})",
+      "Bash(Select-String -Path \"d:\\\\Coding\\\\Inholland\\\\Year 3\\\\term 4\\\\shsv\\\\Comic-book-library\\\\terraform\\\\*.tf\" -Pattern \"checkov:skip\")",
+      "Bash(Select-Object Filename, LineNumber, Line)"
+    ]
+  }
+}
