@@ -62,7 +62,7 @@ EOT
         container {
           name              = "backend"
           image             = var.backend_image
-          image_pull_policy = "Never"
+          image_pull_policy = "Always"
 
           port {
             container_port = var.backend_port
@@ -127,13 +127,24 @@ EOT
 
           security_context {
             allow_privilege_escalation = false
-            read_only_root_filesystem  = false
+            read_only_root_filesystem  = true
             run_as_non_root            = true
             run_as_user                = 1000
             capabilities {
-              drop = ["ALL"]
+              drop = ["ALL", "NET_RAW"]
             }
           }
+
+          # vault-env script is written to /tmp before sourcing; Python also uses /tmp for temp files
+          volume_mount {
+            name       = "tmp"
+            mount_path = "/tmp"
+          }
+        }
+
+        volume {
+          name = "tmp"
+          empty_dir {}
         }
       }
     }

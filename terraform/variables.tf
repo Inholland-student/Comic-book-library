@@ -61,8 +61,9 @@ variable "backend_port" {
 
 variable "mysql_image" {
   type        = string
-  description = "Docker image for MySQL"
-  default     = "mysql:8.4"
+  description = "Docker image for MySQL. Format: image:tag@sha256:DIGEST. Replace the digest after confirming the version: docker inspect --format='{{index .RepoDigests 0}}' mysql:8.4.0"
+  # Placeholder digest — replace with the actual value from the registry before deploying.
+  default = "mysql:8.4.0@sha256:0000000000000000000000000000000000000000000000000000000000000000"
 }
 
 variable "mysql_port" {
@@ -77,8 +78,9 @@ variable "mysql_port" {
 
 variable "phpmyadmin_image" {
   type        = string
-  description = "Docker image for phpMyAdmin"
-  default     = "phpmyadmin:latest"
+  description = "Docker image for phpMyAdmin. Format: image:tag@sha256:DIGEST. Replace the digest after confirming the version: docker inspect --format='{{index .RepoDigests 0}}' phpmyadmin:5.2.1"
+  # Placeholder digest — replace with the actual value from the registry before deploying.
+  default = "phpmyadmin:5.2.1@sha256:0000000000000000000000000000000000000000000000000000000000000000"
 }
 
 variable "phpmyadmin_port" {

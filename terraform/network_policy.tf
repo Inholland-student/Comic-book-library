@@ -108,8 +108,16 @@ resource "kubernetes_network_policy" "backend" {
         protocol = "TCP"
       }
     }
-    # Vault agent sidecar needs to reach the Vault server
+    # Vault agent sidecar needs to reach the Vault server in the vault namespace.
+    # Namespace selector uses the auto-label kubernetes.io/metadata.name added by k8s 1.21+.
     egress {
+      to {
+        namespace_selector {
+          match_labels = {
+            "kubernetes.io/metadata.name" = "vault"
+          }
+        }
+      }
       ports {
         port     = "8200"
         protocol = "TCP"
@@ -151,8 +159,15 @@ resource "kubernetes_network_policy" "mysql" {
         protocol = "TCP"
       }
     }
-    # Vault agent sidecar needs to reach the Vault server
+    # Vault agent sidecar needs to reach the Vault server in the vault namespace.
     egress {
+      to {
+        namespace_selector {
+          match_labels = {
+            "kubernetes.io/metadata.name" = "vault"
+          }
+        }
+      }
       ports {
         port     = "8200"
         protocol = "TCP"

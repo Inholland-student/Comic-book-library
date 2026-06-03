@@ -1,3 +1,11 @@
+resource "kubernetes_service_account" "frontend" {
+  metadata {
+    name      = "frontend"
+    namespace = kubernetes_namespace.env.metadata[0].name
+  }
+  automount_service_account_token = false
+}
+
 resource "kubernetes_deployment" "frontend" {
   metadata {
     name      = "frontend"
@@ -25,6 +33,9 @@ resource "kubernetes_deployment" "frontend" {
       }
 
       spec {
+        service_account_name            = kubernetes_service_account.frontend.metadata[0].name
+        automount_service_account_token = false
+
         security_context {
           run_as_non_root = true
           run_as_user     = 101
@@ -38,7 +49,7 @@ resource "kubernetes_deployment" "frontend" {
         container {
           name              = "frontend"
           image             = var.frontend_image
-          image_pull_policy = "Never"
+          image_pull_policy = "Always"
 
           port {
             container_port = var.frontend_port
@@ -89,13 +100,48 @@ resource "kubernetes_deployment" "frontend" {
 
           security_context {
             allow_privilege_escalation = false
-            read_only_root_filesystem  = false
+            read_only_root_filesystem  = true
             run_as_non_root            = true
             run_as_user                = 101
             capabilities {
-              drop = ["ALL"]
+              drop = ["ALL", "NET_RAW"]
             }
           }
+
+          # nginx needs to write cache, the processed template output, its PID file, and tmp
+          volume_mount {
+            name       = "nginx-cache"
+            mount_path = "/var/cache/nginx"
+          }
+          volume_mount {
+            name       = "nginx-conf"
+            mount_path = "/etc/nginx/conf.d"
+          }
+          volume_mount {
+            name       = "nginx-run"
+            mount_path = "/var/run"
+          }
+          volume_mount {
+            name       = "tmp"
+            mount_path = "/tmp"
+          }
+        }
+
+        volume {
+          name = "nginx-cache"
+          empty_dir {}
+        }
+        volume {
+          name = "nginx-conf"
+          empty_dir {}
+        }
+        volume {
+          name = "nginx-run"
+          empty_dir {}
+        }
+        volume {
+          name = "tmp"
+          empty_dir {}
         }
       }
     }

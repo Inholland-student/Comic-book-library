@@ -48,16 +48,23 @@ EOT
       spec {
         service_account_name = kubernetes_service_account.mysql.metadata[0].name
 
+        # run_as_user = 999 (mysql user) causes the entrypoint to skip the gosu privilege-drop
+        # step, making allow_privilege_escalation=false and drop ALL safe without needing
+        # SETUID/SETGID/CHOWN capabilities back.
         security_context {
-          fs_group = 999
+          run_as_non_root = true
+          run_as_user     = 999
+          run_as_group    = 999
+          fs_group        = 999
           seccomp_profile {
             type = "RuntimeDefault"
           }
         }
 
         container {
-          name  = "mysql"
-          image = var.mysql_image
+          name              = "mysql"
+          image             = var.mysql_image
+          image_pull_policy = "Always"
 
           port {
             container_port = var.mysql_port
@@ -100,7 +107,37 @@ EOT
 
           security_context {
             allow_privilege_escalation = false
+            read_only_root_filesystem  = true
+            capabilities {
+              drop = ["ALL", "NET_RAW"]
+            }
           }
+
+          volume_mount {
+            name       = "mysql-data"
+            mount_path = "/var/lib/mysql"
+          }
+          volume_mount {
+            name       = "mysql-run"
+            mount_path = "/var/run/mysqld"
+          }
+          volume_mount {
+            name       = "tmp"
+            mount_path = "/tmp"
+          }
+        }
+
+        volume {
+          name = "mysql-data"
+          empty_dir {}
+        }
+        volume {
+          name = "mysql-run"
+          empty_dir {}
+        }
+        volume {
+          name = "tmp"
+          empty_dir {}
         }
       }
     }
