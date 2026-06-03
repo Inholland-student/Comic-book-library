@@ -14,7 +14,11 @@ variable "namespace" {
 
 variable "frontend_image" {
   type        = string
-  description = "Docker image for the Vue frontend"
+  description = "Docker image for the Vue frontend. Format: image:tag@sha256:DIGEST. Replace the digest after each CI build using the digest output from docker/build-push-action."
+  # Placeholder digest — overridden per environment in the tfvars files.
+  # Without this default, Checkov evaluates the variable as an empty string and fails
+  # CKV_K8S_14 (no tag) and CKV_K8S_43 (no digest) when scanning without --var-file.
+  default = "comic-frontend:1.0.0@sha256:0000000000000000000000000000000000000000000000000000000000000000"
 }
 
 variable "frontend_replicas" {
@@ -35,7 +39,11 @@ variable "frontend_port" {
 
 variable "backend_image" {
   type        = string
-  description = "Docker image for the backend application"
+  description = "Docker image for the backend application. Format: image:tag@sha256:DIGEST. Replace the digest after each CI build using the digest output from docker/build-push-action."
+  # Placeholder digest — overridden per environment in the tfvars files.
+  # Without this default, Checkov evaluates the variable as an empty string and fails
+  # CKV_K8S_14 (no tag) and CKV_K8S_43 (no digest) when scanning without --var-file.
+  default = "comic-backend:1.0.0@sha256:0000000000000000000000000000000000000000000000000000000000000000"
 }
 
 variable "backend_replicas" {

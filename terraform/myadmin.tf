@@ -7,14 +7,21 @@ resource "kubernetes_service_account" "phpmyadmin" {
 }
 
 resource "kubernetes_deployment" "phpmyadmin" {
-  # checkov:skip=CKV_K8S_40:phpMyAdmin's official image starts Apache as root to bind port 80
-  # (< 1024). CAP_NET_BIND_SERVICE is kept below. In production, place phpMyAdmin behind an
-  # nginx reverse proxy on port 8080 and run the app as www-data.
-  # checkov:skip=CKV_K8S_22:The official phpMyAdmin image writes session data, Apache PID/lock
-  # files, and upload temp files across /var/run/apache2, /var/lock/apache2,
-  # /var/lib/php/sessions, and /var/www/html/tmp. These paths are not documented in the image
-  # spec and mapping them safely requires image-specific testing outside the scope of this
-  # assignment. In production, use a custom image with explicit writable paths.
+  # checkov:skip=CKV_K8S_40:The official phpmyadmin:5.2.1 image starts Apache as root to bind
+  # port 80. Apache forks worker processes that run as www-data, but the master process must
+  # start as root. With allow_privilege_escalation=false set below, no child process can
+  # escalate back to root. In production, this is resolved by placing phpMyAdmin behind an
+  # nginx reverse proxy on a non-privileged port and running the application as www-data.
+  #
+  # checkov:skip=CKV_K8S_25:NET_BIND_SERVICE is required because the official phpmyadmin:5.2.1
+  # image configures Apache with a hardcoded Listen 80 directive in /etc/apache2/ports.conf.
+  # Neither the phpMyAdmin Docker image nor the php:apache base image exposes an environment
+  # variable that substitutes the listen port at runtime, making port reconfiguration impossible
+  # without rebuilding the image. When ALL capabilities are dropped, NET_BIND_SERVICE must be
+  # re-added for any process — including root — to bind a privileged port (< 1024).
+  # In production: (a) build a custom image that listens on port 8080, or (b) deploy an nginx
+  # sidecar as a reverse proxy that handles port 80 and forwards to phpMyAdmin on 8080, then
+  # remove this capability entirely.
   metadata {
     name      = "phpmyadmin"
     namespace = kubernetes_namespace.env.metadata[0].name
@@ -104,14 +111,51 @@ resource "kubernetes_deployment" "phpmyadmin" {
 
           security_context {
             allow_privilege_escalation = false
-            read_only_root_filesystem  = false
+            read_only_root_filesystem  = true
             capabilities {
               drop = ["ALL", "NET_RAW"]
-              # NET_BIND_SERVICE is required: Apache binds port 80 (< 1024).
-              # Dropping ALL removes this even for the root process.
+              # NET_BIND_SERVICE retained — see checkov:skip=CKV_K8S_25 above.
               add = ["NET_BIND_SERVICE"]
             }
           }
+
+          # Apache writes its PID and lock files at startup; PHP uses /tmp for session storage
+          # and upload temp files; phpMyAdmin uses /var/www/html/tmp for export temp files.
+          # Apache logs in the official PHP Docker image are symlinked to /dev/stdout and
+          # /dev/stderr, so /var/log/apache2 does not require a writable mount.
+          volume_mount {
+            name       = "apache-run"
+            mount_path = "/var/run/apache2"
+          }
+          volume_mount {
+            name       = "apache-lock"
+            mount_path = "/var/lock/apache2"
+          }
+          volume_mount {
+            name       = "tmp"
+            mount_path = "/tmp"
+          }
+          volume_mount {
+            name       = "pma-tmp"
+            mount_path = "/var/www/html/tmp"
+          }
+        }
+
+        volume {
+          name = "apache-run"
+          empty_dir {}
+        }
+        volume {
+          name = "apache-lock"
+          empty_dir {}
+        }
+        volume {
+          name = "tmp"
+          empty_dir {}
+        }
+        volume {
+          name = "pma-tmp"
+          empty_dir {}
         }
       }
     }

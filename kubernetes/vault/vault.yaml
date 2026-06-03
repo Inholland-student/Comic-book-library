@@ -44,6 +44,20 @@ metadata:
     app.kubernetes.io/name: vault-agent-injector
     app.kubernetes.io/instance: vault
     app.kubernetes.io/managed-by: Helm
+  annotations:
+    # checkov:skip=CKV_K8S_155:The `patch` verb on mutatingwebhookconfigurations is
+    # architecturally required by TLS auto mode (AGENT_INJECT_TLS_AUTO). On startup the
+    # injector generates a self-signed TLS certificate and must write the corresponding CA
+    # bundle into the MutatingWebhookConfiguration so that the kube-apiserver trusts the
+    # webhook endpoint. Without `patch`, the caBundle field remains empty, every webhook
+    # admission call is rejected as untrusted, and Vault Agent sidecar injection fails
+    # entirely. In production this permission is eliminated by replacing TLS auto mode with
+    # cert-manager-issued certificates: cert-manager manages cert rotation and patches the
+    # caBundle automatically, removing the need for the injector to hold this permission.
+    checkov.io/skip1: "CKV_K8S_155=patch on mutatingwebhookconfigurations is required by
+      AGENT_INJECT_TLS_AUTO to write the generated CA bundle into the webhook config so the
+      kube-apiserver trusts the injector TLS endpoint. In production, replace TLS auto mode
+      with cert-manager to eliminate this permission."
 rules:
 - apiGroups: ["admissionregistration.k8s.io"]
   resources: ["mutatingwebhookconfigurations"]
@@ -221,6 +235,17 @@ metadata:
     app.kubernetes.io/instance: vault
     app.kubernetes.io/managed-by: Helm
     component: webhook
+  annotations:
+    # checkov:skip=CKV_K8S_38:The vault-agent-injector service account token is required.
+    # The injector uses it to call the Kubernetes API for the operations granted by
+    # vault-agent-injector-clusterrole: get/list/watch/patch on mutatingwebhookconfigurations
+    # (for TLS CA bundle rotation) and to request TLS certificates via the CSR API. Disabling
+    # automount would prevent all Kubernetes API calls and break webhook TLS management.
+    # In production, consider using projected service account token volumes with short
+    # expiry and audience scoping instead of disabling the token entirely.
+    checkov.io/skip1: "CKV_K8S_38=SA token is required for Kubernetes API access:
+      mutatingwebhookconfigurations management (TLS auto mode) and CSR API for cert issuance.
+      Disabling automount would break the injector completely."
 spec:
   replicas: 1
   selector:
@@ -249,7 +274,11 @@ spec:
       securityContext:
         runAsNonRoot: true
         runAsGroup: 1000
-        runAsUser: 100
+        # Changed from 100 (vault user in image) to 10000 to satisfy CKV_K8S_40.
+        # The vault-k8s binary is a Go HTTP server with no UID-gated logic; it does not
+        # check its own identity at runtime. All file writes target emptyDir volumes which
+        # are group-writable via fsGroup, so the UID change does not affect filesystem access.
+        runAsUser: 10000
         fsGroup: 1000
         seccompProfile:
           type: RuntimeDefault
@@ -366,6 +395,20 @@ metadata:
     app.kubernetes.io/name: vault
     app.kubernetes.io/instance: vault
     app.kubernetes.io/managed-by: Helm
+  annotations:
+    # checkov:skip=CKV_K8S_38:The vault server service account token is required.
+    # Vault's Kubernetes auth backend reads the pod's own SA token from the standard mount
+    # path (/var/run/secrets/kubernetes.io/serviceaccount/token) and presents it to the
+    # Kubernetes TokenReview API to authenticate other workloads. The vault SA holds a
+    # ClusterRoleBinding to system:auth-delegator specifically to enable this TokenReview
+    # capability. Disabling automount would break the Kubernetes auth method and prevent any
+    # application pod from authenticating to Vault to retrieve secrets.
+    # In production, consider using the Kubernetes projected token volume API with audience
+    # scoping rather than disabling the token entirely.
+    checkov.io/skip1: "CKV_K8S_38=SA token required for Vault Kubernetes auth backend:
+      Vault calls the TokenReview API using this token to validate other pods credentials.
+      The system:auth-delegator ClusterRoleBinding exists specifically for this purpose.
+      Disabling automount breaks secret injection for all application workloads."
 spec:
   serviceName: vault-internal
   podManagementPolicy: Parallel
@@ -391,7 +434,12 @@ spec:
       securityContext:
         runAsNonRoot: true
         runAsGroup: 1000
-        runAsUser: 100
+        # Changed from 100 (vault user in image) to 10000 to satisfy CKV_K8S_40.
+        # SKIP_CHOWN=true and SKIP_SETCAP=true disable all UID-sensitive entrypoint
+        # operations. Dev mode is entirely in-memory with no persistent storage requiring
+        # specific file ownership. All writable paths use emptyDir volumes accessible via
+        # fsGroup=1000, so the new UID does not affect any runtime file access.
+        runAsUser: 10000
         fsGroup: 1000
         seccompProfile:
           type: RuntimeDefault
@@ -475,7 +523,7 @@ spec:
             - containerPort: 8202
               name: http-rep
           # Liveness uses HTTP GET against the sys/health endpoint (dev mode always returns 200).
-          # Longer initial delay than readiness so a slow-starting pod isn't killed prematurely.
+          # Longer initial delay than readiness so a slow-starting pod is not killed prematurely.
           livenessProbe:
             httpGet:
               path: /v1/sys/health
@@ -547,13 +595,32 @@ metadata:
   namespace: vault
   annotations:
     "helm.sh/hook": test
+    # checkov:skip=CKV_K8S_8:Liveness probes are designed for long-running services to detect
+    # and recover from stuck processes. This is a Helm test hook with restartPolicy=Never: it
+    # executes a single script, checks an exit code, and terminates. A liveness probe that
+    # triggers a restart has no effect when restartPolicy=Never is set, and the pod completes
+    # before the typical initialDelaySeconds window expires. Adding a probe here would be
+    # semantically incorrect, not merely unnecessary.
+    # checkov:skip=CKV_K8S_9:Readiness probes gate traffic routing from a Service. No Service
+    # selector targets this pod; it is ephemeral and receives no inbound traffic. A readiness
+    # probe on a one-shot Helm test pod has no operational meaning and is architecturally
+    # inappropriate for the restartPolicy=Never lifecycle.
+    checkov.io/skip1: "CKV_K8S_8=Helm test hook with restartPolicy=Never. Liveness probes
+      restart stuck long-running services; they have no effect on one-shot pods and would
+      fire after the test has already completed."
+    checkov.io/skip2: "CKV_K8S_9=Helm test hook with restartPolicy=Never. Readiness probes
+      gate Service traffic routing; no Service targets this pod and it receives no inbound
+      connections. The control is architecturally inapplicable to one-shot test pods."
 spec:
   restartPolicy: Never
   # Test pod only calls the Vault HTTP API; it does not need the Kubernetes API.
   automountServiceAccountToken: false
   securityContext:
     runAsNonRoot: true
-    runAsUser: 100
+    # Changed from 100 to 10000 to satisfy CKV_K8S_40.
+    # The vault binary used here only makes an HTTP call to /v1/sys/health and exits.
+    # No UID-gated operations are performed.
+    runAsUser: 10000
     runAsGroup: 1000
     seccompProfile:
       type: RuntimeDefault

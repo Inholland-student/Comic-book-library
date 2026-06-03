@@ -82,6 +82,16 @@ jobs:
             org.opencontainers.image.revision=${{ github.sha }}
             org.opencontainers.image.source=${{ github.server_url }}/${{ github.repository }}
 
+      - name: Output immutable image references for Terraform
+        run: |
+          echo "## Immutable image references" >> "$GITHUB_STEP_SUMMARY"
+          echo "Copy these into the appropriate \`envs/*.tfvars\` file after each build." >> "$GITHUB_STEP_SUMMARY"
+          echo "" >> "$GITHUB_STEP_SUMMARY"
+          echo '```' >> "$GITHUB_STEP_SUMMARY"
+          echo "frontend_image = \"${{ steps.image_vars.outputs.frontend_image }}:${{ github.sha }}@${{ steps.build_frontend.outputs.digest }}\"" >> "$GITHUB_STEP_SUMMARY"
+          echo "backend_image  = \"${{ steps.image_vars.outputs.backend_image }}:${{ github.sha }}@${{ steps.build_backend.outputs.digest }}\"" >> "$GITHUB_STEP_SUMMARY"
+          echo '```' >> "$GITHUB_STEP_SUMMARY"
+
   sbom:
     runs-on: ubuntu-latest
     needs: build
