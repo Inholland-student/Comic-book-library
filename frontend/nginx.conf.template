@@ -1,0 +1,81 @@
+server {
+    listen 5173;
+    server_name _;
+
+    # Removes nginx version from the Server header (e.g. "nginx/1.27.0" → "nginx").
+    # Completely hiding the Server header requires the ngx_headers_more module which
+    # is not in the standard nginx:1.27-alpine image; server_tokens off is the
+    # maximum available with the stock image.
+    server_tokens off;
+
+    root  /usr/share/nginx/html;
+    index index.html;
+
+    # ── Security headers ──────────────────────────────────────────────────────
+    # Applied to every response (static files, SPA fallback, proxied API calls)
+    # via the `always` flag, which covers 4xx/5xx responses too.
+
+    # Prevents the browser from MIME-sniffing a response away from the declared
+    # Content-Type. Stops attacks where a JS file is served with text/plain and
+    # the browser executes it anyway.
+    add_header X-Content-Type-Options "nosniff" always;
+
+    # Clickjacking: forbids this page from being embedded inside any <iframe>.
+    # X-Frame-Options is kept alongside frame-ancestors (in the CSP below) for
+    # compatibility with browsers that do not yet honour frame-ancestors.
+    add_header X-Frame-Options "DENY" always;
+
+    # Content Security Policy — crafted from a full audit of the source tree:
+    #
+    #   default-src 'self'    — baseline: everything must come from this origin
+    #   script-src  'self'    — only Vite-bundled /assets/index-*.js; no inline
+    #                           scripts, no eval (primary XSS defence)
+    #   style-src   'self'    — Vite production build extracts ALL <style scoped>
+    #                           blocks to /assets/index-*.css (no inline styles
+    #                           generated). No v-show, no :style bindings, and no
+    #                           <Transition> components exist in this app, so
+    #                           'unsafe-inline' is not needed and has been removed.
+    #                           If a future Vue change injects inline styles, add
+    #                           'unsafe-inline' back here and document the reason.
+    #   img-src  'self' data: — /favicon.ico (same-origin); data: for any
+    #                           browser-generated data-URI images
+    #   font-src    'self'    — system font stack only; no external fonts fetched
+    #   connect-src 'self'    — all axios /api/* calls are proxied same-origin
+    #   frame-ancestors 'none'— modern clickjacking protection
+    #   form-action 'self'    — forms use @submit.prevent + axios; HTML fallback
+    #                           may only POST to this origin
+    #   base-uri    'self'    — prevents <base href> injection
+    #   object-src  'none'    — no Flash / legacy plugins
+    add_header Content-Security-Policy
+        "default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' data:; font-src 'self'; connect-src 'self'; frame-ancestors 'none'; form-action 'self'; base-uri 'self'; object-src 'none';"
+        always;
+
+    # Controls how much referrer information is sent on navigation.
+    # strict-origin-when-cross-origin: sends full URL for same-origin, only
+    # the origin (no path) for cross-origin HTTPS, nothing for downgrade to HTTP.
+    add_header Referrer-Policy "strict-origin-when-cross-origin" always;
+
+    # Disables browser features this application does not use.
+    # An empty () means "deny for all origins including this one".
+    add_header Permissions-Policy "camera=(), microphone=(), geolocation=(), payment=()" always;
+
+    # ── API proxy ─────────────────────────────────────────────────────────────
+    location /api/ {
+        proxy_pass             ${BACKEND_PROXY_TARGET};
+        proxy_http_version     1.1;
+        proxy_set_header Host              $host;
+        proxy_set_header X-Real-IP         $remote_addr;
+        proxy_set_header X-Forwarded-For   $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+
+        # Hide the backend's own Server and X-Powered-By headers so that
+        # Flask/Werkzeug identity does not leak through the proxy.
+        proxy_hide_header Server;
+        proxy_hide_header X-Powered-By;
+    }
+
+    # ── SPA fallback ──────────────────────────────────────────────────────────
+    location / {
+        try_files $uri $uri/ /index.html;
+    }
+}

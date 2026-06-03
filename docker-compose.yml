@@ -11,7 +11,6 @@ services:
       - "3307:3306"
     volumes:
       - mysql_data:/var/lib/mysql
-      - ./data/init.sql:/docker-entrypoint-initdb.d/init.sql
     networks:
       - comic_network
     healthcheck:
@@ -69,13 +68,9 @@ services:
       dockerfile: Dockerfile
     container_name: comic_frontend
     environment:
-      # inside docker, localhost is wrong — use service name for vite proxy
       BACKEND_PROXY_TARGET: http://backend:5000
     ports:
       - "5173:5173"
-    volumes:
-      - ./frontend:/app
-      - /app/node_modules
     networks:
       - comic_network
     depends_on:

@@ -2,21 +2,13 @@
   <div class="comics-container">
     <div class="comics-header">
       <h1>Comic Book Library</h1>
-      <button 
-        v-if="authStore.currentUser && isAdmin" 
-        @click="showCreateForm = true"
-        class="btn btn-primary"
-      >
+      <button v-if="authStore.currentUser && isAdmin" @click="showCreateForm = true" class="btn btn-primary">
         + Add Comic
       </button>
     </div>
 
     <div v-if="comicsStore.hasMore" class="load-more">
-      <button 
-        class="btn btn-primary"
-        @click="comicsStore.loadMoreComics"
-        :disabled="comicsStore.loading"
-      >
+      <button class="btn btn-primary" @click="comicsStore.loadMoreComics" :disabled="comicsStore.loading">
         {{ comicsStore.loading ? 'Loading more comics...' : 'Load more comics' }}
       </button>
     </div>
@@ -31,34 +23,15 @@
         <form @submit.prevent="handleSubmit" class="comic-form">
           <div class="form-group">
             <label for="serie">Serie:</label>
-            <input 
-              id="serie"
-              v-model="formData.serie" 
-              type="text" 
-              required 
-              placeholder="e.g., X-Men"
-            />
+            <input id="serie" v-model="formData.serie" type="text" required placeholder="e.g., X-Men" />
           </div>
           <div class="form-group">
             <label for="number">Number:</label>
-            <input 
-              id="number"
-              v-model.number="formData.number" 
-              type="number" 
-              required 
-              min="0"
-              placeholder="Issue number"
-            />
+            <input id="number" v-model="formData.number" type="text" required placeholder="Issue number" />
           </div>
           <div class="form-group">
             <label for="title">Title:</label>
-            <input 
-              id="title"
-              v-model="formData.title" 
-              type="text" 
-              required 
-              placeholder="Comic title"
-            />
+            <input id="title" v-model="formData.title" type="text" required placeholder="Comic title" />
           </div>
           <div class="form-actions">
             <button type="submit" class="btn btn-primary" :disabled="comicsStore.loading">
@@ -92,18 +65,10 @@
         <div class="comic-header">
           <h3>{{ comic.serie }} #{{ comic.number }}</h3>
           <div v-if="isAdmin" class="comic-actions">
-            <button 
-              @click="editComic(comic)" 
-              class="btn btn-small btn-edit"
-              title="Edit"
-            >
+            <button @click="editComic(comic)" class="btn btn-small btn-edit" title="Edit">
               ✏️
             </button>
-            <button 
-              @click="deleteComicConfirm(comic)" 
-              class="btn btn-small btn-delete"
-              title="Delete"
-            >
+            <button @click="deleteComicConfirm(comic)" class="btn btn-small btn-delete" title="Delete">
               🗑️
             </button>
           </div>

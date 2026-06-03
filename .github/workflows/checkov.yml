@@ -1,0 +1,33 @@
+name: Checkov IaC Scan
+
+on:
+  pull_request:
+    branches: [main, dev]
+
+permissions:
+  contents: read
+
+jobs:
+  checkov:
+    name: Checkov Static Analysis
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Run Checkov
+        uses: bridgecrewio/checkov-action@master
+        with:
+          directory: .
+          output_format: json
+          output_file_path: checkov-results.json
+          soft_fail: false
+
+      - name: Upload Checkov results
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: checkov-results
+          path: checkov-results.json
+          retention-days: 90

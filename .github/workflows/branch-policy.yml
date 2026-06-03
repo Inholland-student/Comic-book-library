@@ -1,0 +1,33 @@
+name: Branch Policy
+
+on:
+  pull_request:
+    branches: [main]
+
+permissions:
+  contents: read
+  pull-requests: read
+
+jobs:
+  check-source-branch:
+    name: Source Branch Check
+    runs-on: ubuntu-latest
+    steps:
+      - name: Enforce PRs to main come from dev
+        env:
+          HEAD_REF: ${{ github.head_ref }}
+          BASE_REF: ${{ github.base_ref }}
+        run: |
+          # This check only applies to PRs targeting main.
+          # If GitHub evaluates this workflow for a PR targeting dev
+          # (e.g. feature → dev), skip gracefully so the PR is not blocked.
+          if [ "$BASE_REF" != "main" ]; then
+            echo "OK: PR targets '$BASE_REF', not main — source branch policy does not apply."
+            exit 0
+          fi
+          if [ "$HEAD_REF" != "dev" ]; then
+            echo "ERROR: PRs to main must come from the dev branch."
+            echo "This PR is from: $HEAD_REF"
+            exit 1
+          fi
+          echo "OK: PR source branch is dev."

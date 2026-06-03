@@ -37,7 +37,18 @@ PY
     exit 1
 }
 
+run_migrations() {
+    echo "[entrypoint] Running database migrations..."
+    flask db upgrade
+    echo "[entrypoint] Migrations complete."
+}
+
 run_import() {
+    local csv_path="${IMPORT_CSV_PATH:-/app/data/comic_digital.csv}"
+    if [ ! -f "$csv_path" ]; then
+        echo "[entrypoint] CSV not found at $csv_path, skipping import."
+        return 0
+    fi
     cmd=(python scripts/load_comics_from_csv.py)
     if [ -n "${IMPORT_CREATED_BY:-}" ]; then
         cmd+=(--created-by "${IMPORT_CREATED_BY}")
@@ -47,6 +58,8 @@ run_import() {
 }
 
 wait_for_db
+run_migrations
+python scripts/run_init_sql.py
 run_import
 
 exec "$@"

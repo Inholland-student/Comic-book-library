@@ -1,6 +1,8 @@
 /.env
 /.env.local
 
+.cache/
+
 # Python
 __pycache__/
 *.py[cod]
@@ -52,3 +54,14 @@ htmlcov/
 
 # Docker
 docker-compose.override.yml
+
+#terraform
+*.tfvars
+*.tfstate
+*.tfstate.*
+.terraform/
+.terraform.lock.hcl*.tfvars
+*.tfstate
+*.tfstate.*
+.terraform/
+.terraform.lock.hcl
