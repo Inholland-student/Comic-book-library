@@ -60,7 +60,7 @@ resource "kubernetes_deployment" "phpmyadmin" {
         container {
           name              = "phpmyadmin"
           image             = var.phpmyadmin_image
-          image_pull_policy = "Always"
+          image_pull_policy = var.image_pull_policy
 
           port {
             container_port = var.phpmyadmin_port
@@ -119,10 +119,15 @@ resource "kubernetes_deployment" "phpmyadmin" {
             }
           }
 
-          # Apache writes its PID and lock files at startup; PHP uses /tmp for session storage
-          # and upload temp files; phpMyAdmin uses /var/www/html/tmp for export temp files.
-          # Apache logs in the official PHP Docker image are symlinked to /dev/stdout and
-          # /dev/stderr, so /var/log/apache2 does not require a writable mount.
+          # Writable paths required by Apache + PHP + phpMyAdmin at runtime:
+          #   /var/run/apache2  — apache2.pid and unix socket
+          #   /var/lock/apache2 — accept.lock written by mpm module
+          #   /var/lib/apache2  — module state (mpm-event scoreboard, etc.)
+          #   /tmp              — general temp; upload buffer
+          #   /var/lib/php/sessions — PHP session storage (default save_path in php:apache)
+          #   /var/www/html/tmp — phpMyAdmin export/import temp directory
+          # Apache logs are symlinked to /dev/stdout and /dev/stderr in the base image,
+          # so /var/log/apache2 does not need a writable mount.
           volume_mount {
             name       = "apache-run"
             mount_path = "/var/run/apache2"
@@ -132,8 +137,16 @@ resource "kubernetes_deployment" "phpmyadmin" {
             mount_path = "/var/lock/apache2"
           }
           volume_mount {
+            name       = "apache-lib"
+            mount_path = "/var/lib/apache2"
+          }
+          volume_mount {
             name       = "tmp"
             mount_path = "/tmp"
+          }
+          volume_mount {
+            name       = "php-sessions"
+            mount_path = "/var/lib/php/sessions"
           }
           volume_mount {
             name       = "pma-tmp"
@@ -150,7 +163,15 @@ resource "kubernetes_deployment" "phpmyadmin" {
           empty_dir {}
         }
         volume {
+          name = "apache-lib"
+          empty_dir {}
+        }
+        volume {
           name = "tmp"
+          empty_dir {}
+        }
+        volume {
+          name = "php-sessions"
           empty_dir {}
         }
         volume {

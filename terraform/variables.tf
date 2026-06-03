@@ -3,6 +3,16 @@ variable "environment" {
   description = "Environment name: dev, test, or prod"
 }
 
+variable "image_pull_policy" {
+  type        = string
+  description = "Kubernetes imagePullPolicy. Always for CI/CD with a registry; IfNotPresent for local Minikube where images are built directly into the cluster daemon."
+  default     = "Always"
+  validation {
+    condition     = contains(["Always", "IfNotPresent", "Never"], var.image_pull_policy)
+    error_message = "image_pull_policy must be Always, IfNotPresent, or Never."
+  }
+}
+
 variable "namespace" {
   type        = string
   description = "Kubernetes namespace for the environment"

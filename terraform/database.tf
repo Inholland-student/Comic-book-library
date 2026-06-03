@@ -64,7 +64,7 @@ EOT
         container {
           name              = "mysql"
           image             = var.mysql_image
-          image_pull_policy = "Always"
+          image_pull_policy = var.image_pull_policy
 
           port {
             container_port = var.mysql_port

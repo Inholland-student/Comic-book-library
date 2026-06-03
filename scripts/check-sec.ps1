@@ -11,7 +11,6 @@ docker run --rm -v "${HostPath}:/root/" aquasec/trivy fs `
     --ignore-unfixed `
     --scanners vuln `
     --timeout 30m `
-    --ignorefile /root/.trivyignore `
     /root/
 
 if ($LASTEXITCODE -ne 0) {
