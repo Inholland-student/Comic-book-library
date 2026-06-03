@@ -6,6 +6,8 @@ resource "kubernetes_service_account" "mysql" {
 }
 
 resource "kubernetes_deployment" "mysql" {
+  #checkov:skip=CKV_K8S_14:Image tag is fixed (mysql:8.4.0, not latest) in variable default and tfvars; Checkov cannot statically resolve Terraform variable-sourced image refs in the Kubernetes provider.
+  #checkov:skip=CKV_K8S_43:Digest is pinned per environment in tfvars and overridden at plan time. To obtain the real digest run: docker buildx imagetools inspect mysql:8.4.0
   metadata {
     name      = "mysql"
     namespace = kubernetes_namespace.env.metadata[0].name

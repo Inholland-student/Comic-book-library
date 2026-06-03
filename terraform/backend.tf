@@ -6,6 +6,8 @@ resource "kubernetes_service_account" "backend" {
 }
 
 resource "kubernetes_deployment" "backend" {
+  #checkov:skip=CKV_K8S_14:Image tag is fixed (not latest) in variable default and tfvars; Checkov cannot statically resolve Terraform variable-sourced image refs in the Kubernetes provider.
+  #checkov:skip=CKV_K8S_43:comic-backend is a local Minikube build with no stable remote registry digest. In CI/CD the image is pushed to a registry and digest pinned via -var=backend_image at plan time.
   metadata {
     name      = "backend"
     namespace = kubernetes_namespace.env.metadata[0].name

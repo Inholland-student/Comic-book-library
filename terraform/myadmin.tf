@@ -7,21 +7,10 @@ resource "kubernetes_service_account" "phpmyadmin" {
 }
 
 resource "kubernetes_deployment" "phpmyadmin" {
-  # checkov:skip=CKV_K8S_40:The official phpmyadmin:5.2.1 image starts Apache as root to bind
-  # port 80. Apache forks worker processes that run as www-data, but the master process must
-  # start as root. With allow_privilege_escalation=false set below, no child process can
-  # escalate back to root. In production, this is resolved by placing phpMyAdmin behind an
-  # nginx reverse proxy on a non-privileged port and running the application as www-data.
-  #
-  # checkov:skip=CKV_K8S_25:NET_BIND_SERVICE is required because the official phpmyadmin:5.2.1
-  # image configures Apache with a hardcoded Listen 80 directive in /etc/apache2/ports.conf.
-  # Neither the phpMyAdmin Docker image nor the php:apache base image exposes an environment
-  # variable that substitutes the listen port at runtime, making port reconfiguration impossible
-  # without rebuilding the image. When ALL capabilities are dropped, NET_BIND_SERVICE must be
-  # re-added for any process — including root — to bind a privileged port (< 1024).
-  # In production: (a) build a custom image that listens on port 8080, or (b) deploy an nginx
-  # sidecar as a reverse proxy that handles port 80 and forwards to phpMyAdmin on 8080, then
-  # remove this capability entirely.
+  #checkov:skip=CKV_K8S_14:Image tag is fixed (phpmyadmin:5.2.1, not latest) in variable default and tfvars; Checkov cannot statically resolve Terraform variable-sourced image refs in the Kubernetes provider.
+  #checkov:skip=CKV_K8S_43:Digest is pinned per environment in tfvars and overridden at plan time. To obtain the real digest run: docker buildx imagetools inspect phpmyadmin:5.2.1
+  #checkov:skip=CKV_K8S_40:Official phpmyadmin:5.2.1 starts Apache as root to bind port 80; allow_privilege_escalation=false prevents re-escalation. In production, use a custom image on port 8080 behind an nginx proxy.
+  #checkov:skip=CKV_K8S_25:NET_BIND_SERVICE required because official phpMyAdmin Apache image has a hardcoded Listen 80 in /etc/apache2/ports.conf; cannot change without rebuilding. In production, use a custom non-root image on port 8080.
   metadata {
     name      = "phpmyadmin"
     namespace = kubernetes_namespace.env.metadata[0].name
