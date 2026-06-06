@@ -65,3 +65,6 @@ docker-compose.override.yml
 *.tfstate.*
 .terraform/
 .terraform.lock.hcl
+
+# defect dojo
+/defectdojo-repo
