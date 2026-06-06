@@ -66,6 +66,33 @@ To stop: `docker compose down`
 
 ---
 
+## How to start DefectDojo
+
+DefectDojo is the dashboard where all security scan results are collected. The repo is already included in this project under the `defectdojo-repo` folder.
+
+**Step 1 — Start DefectDojo**
+```powershell
+cd defectdojo-repo
+docker compose up
+```
+
+**Step 2 — Wait for it to initialize**
+
+This takes a few minutes the first time. Watch the logs — when you see `Admin password: ...` it's ready. Copy that password, you'll need it to log in.
+
+**Step 3 — Open the dashboard**
+
+Go to http://localhost:8080 and log in with:
+- Username: `admin`
+- Password: the one from the logs (ask a teammate if you missed it)
+
+**Step 4 — To stop DefectDojo**
+```powershell
+docker compose down
+```
+
+---
+
 ## Security scanning (DefectDojo)
 
 All security scan results are collected in **DefectDojo**, a vulnerability management dashboard.
