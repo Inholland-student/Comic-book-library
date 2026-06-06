@@ -46,6 +46,6 @@ docker run --rm `
     --severity "HIGH,CRITICAL" `
     comic-frontend:latest
 
-Write-Host "Frontend scan complete (non-blocking — see CI pipeline for enforcement)." -ForegroundColor Yellow
+Write-Host "Frontend scan complete (non-blocking - see CI pipeline for enforcement)." -ForegroundColor Yellow
 
 Write-Host "`nBUILD GREEN: No high-severity vulnerabilities detected!" -ForegroundColor Green
