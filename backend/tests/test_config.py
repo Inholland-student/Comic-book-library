@@ -44,7 +44,7 @@ class TestConfigLoading:
             os.environ['DB_USER'] = 'user'
             os.environ['DB_PASSWORD'] = 'pass'
             os.environ['DB_NAME'] = 'db'
-            # JWT_SECRET is missing
+            os.environ['JWT_SECRET'] = ''  # empty so load_dotenv() won't override it from .env
             
             with pytest.raises(RuntimeError, match="Missing required environment variables"):
                 import importlib
