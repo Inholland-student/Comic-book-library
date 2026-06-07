@@ -1,5 +1,4 @@
-"""POST /api/auth/users — super_admin vs admin rules (needs mysql + seed super_admin)."""
-import pytest
+"""POST /api/auth/users — super_admin vs admin rules (needs seeded DB)."""
 from datetime import datetime
 
 
@@ -93,7 +92,7 @@ def test_friend_gets_403(client):
 def test_admin_can_create_friend(client):
     login = client.post(
         '/api/auth/login',
-        json={'username': 'admin_user', 'password': 'changeme'},
+        json={'username': 'admin', 'password': 'changeme'},
     )
     assert login.status_code == 200
     u = _uniq('fromadmin')
@@ -113,7 +112,7 @@ def test_admin_can_create_friend(client):
 def test_admin_rejects_admin_role(client):
     login = client.post(
         '/api/auth/login',
-        json={'username': 'admin_user', 'password': 'changeme'},
+        json={'username': 'admin', 'password': 'changeme'},
     )
     assert login.status_code == 200
     u = _uniq('admincant')

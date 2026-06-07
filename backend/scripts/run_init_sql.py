@@ -18,7 +18,7 @@ SEED_USERS = [
         "role": "admin",
     },
     {
-        "username": "super_user",
+        "username": "super_admin",
         "email": "super_admin@mail.com",
         "password": "changeme",
         "role": "super_admin",
