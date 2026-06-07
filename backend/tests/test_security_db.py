@@ -38,27 +38,28 @@ class TestPasswordSecurity:
         password_hash = hash_password(correct_password)
         assert verify_password(wrong_password, password_hash) is False
     
-    def test_end_to_end_user_login_flow(self):
+    def test_end_to_end_user_login_flow(self, app):
         """🔒 Test complete password flow: create user, retrieve, verify password"""
         username = f'test_login_{datetime.now().timestamp()}'
         email = f'{username}@test.local'
         password = 'login_test_password_789'
-        
-        # 1. Create user with plaintext password
-        user = create_user(
-            username=username,
-            email=email,
-            password_plaintext=password,
-            role='friend'
-        )
-        assert user is not None
-        
-        # 2. Retrieve user from database
-        retrieved_user = get_user_by_username(username)
-        assert retrieved_user is not None
-        
-        # 3. Verify password against retrieved hash
-        assert verify_password(password, retrieved_user.password_hash) is True
+
+        with app.app_context():
+            # 1. Create user with plaintext password
+            user = create_user(
+                username=username,
+                email=email,
+                password_plaintext=password,
+                role='friend'
+            )
+            assert user is not None
+
+            # 2. Retrieve user from database
+            retrieved_user = get_user_by_username(username)
+            assert retrieved_user is not None
+
+            # 3. Verify password against retrieved hash
+            assert verify_password(password, retrieved_user.password_hash) is True
         
         # 4. Verify wrong password doesn't work
         assert verify_password('wrong_password', retrieved_user.password_hash) is False
