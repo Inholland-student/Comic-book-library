@@ -117,7 +117,8 @@ Make sure the app is running before running ZAP. Run each command from the proje
 
 **Checkov** (checks Terraform config for misconfigurations)
 ```powershell
-checkov -d terraform --output json -o checkov-results.json
+checkov -d terraform --output json > checkov-results.json
+
 ```
 
 **Semgrep** (checks source code for security issues)
